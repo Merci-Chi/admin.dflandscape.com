@@ -993,7 +993,7 @@
 
   function updateScrollTopButton() {
     const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    const shouldShow = scrollY > 260 && !appShell.hidden;
+    const shouldShow = scrollY > 180 && !appShell.hidden;
 
     scrollTopButton.hidden = false;
     scrollTopButton.classList.toggle("show", shouldShow);
@@ -1009,6 +1009,7 @@
 
   window.addEventListener("scroll", updateScrollTopButton, { passive: true });
   window.addEventListener("resize", updateScrollTopButton);
+  window.requestAnimationFrame(updateScrollTopButton);
 
   client.auth.onAuthStateChange((_event, session) => {
     if (!session) showLogin();
