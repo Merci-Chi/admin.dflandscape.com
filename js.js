@@ -18,6 +18,7 @@
 
   const $ = (selector) => document.querySelector(selector);
   const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
+
   const loginView = $("#loginView");
   const appView = $("#appView");
   const loginForm = $("#loginForm");
@@ -25,6 +26,7 @@
   const loginError = $("#loginError");
   const saveEmailCheckbox = $("#saveEmail");
   const emailInput = $("#email");
+
   const fileInput = $("#fileInput");
   const photoGrid = $("#photoGrid");
   const photoCount = $("#photoCount");
@@ -33,6 +35,7 @@
   const desktopPreview = $("#desktopPreview");
   const mobilePreview = $("#mobilePreview");
   const signedInEmail = $("#signedInEmail");
+
   const deleteModal = $("#deleteModal");
   const featuredModal = $("#featuredModal");
   const pairModal = $("#pairModal");
@@ -49,22 +52,31 @@
   let selectedPairId = null;
   let selectedFeaturedId = null;
   let toastTimer = null;
+  let appSessionUserId = null;
 
   function toast(message, type = "ok") {
     const el = $("#toast");
+    if (!el) return;
+
     el.textContent = message;
     el.classList.toggle("error", type === "error");
     el.classList.add("show");
+
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("show"), 2200);
+    toastTimer = setTimeout(() => {
+      el.classList.remove("show");
+    }, 2200);
   }
 
   function setBusy(button, busy, normalText) {
     if (!button) return;
+
     button.disabled = busy;
+
     if (busy) {
       button.dataset.original = button.innerHTML;
-      button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Working…';
+      button.innerHTML =
+        '<i class="fa-solid fa-spinner fa-spin"></i> Working…';
     } else if (button.dataset.original) {
       button.innerHTML = button.dataset.original;
       delete button.dataset.original;
@@ -83,7 +95,9 @@
   }
 
   function publicUrl(path) {
-    return client.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+    return client.storage
+      .from(BUCKET)
+      .getPublicUrl(path).data.publicUrl;
   }
 
   async function checkAdmin(user) {
@@ -94,35 +108,56 @@
       .maybeSingle();
 
     if (error) throw error;
+
     return !!data;
   }
 
   async function enterApp(session) {
     const user = session?.user;
-    if (!user) return showLogin();
+
+    if (!user) {
+      showLogin();
+      return;
+    }
 
     try {
       const allowed = await checkAdmin(user);
+
       if (!allowed) {
         await client.auth.signOut();
-        showLogin("This account is signed in, but it is not a Desert Forest admin.");
+
+        showLogin(
+          "This account is signed in, but it is not a Desert Forest admin."
+        );
+
         return;
       }
     } catch (error) {
       console.error(error);
-      showLogin("Admin access is not set up yet. Run the SQL below first.");
+
+      showLogin(
+        "Admin access is not set up yet. Run the Supabase admin SQL first."
+      );
+
       return;
     }
 
     signedInEmail.textContent = user.email || "Admin";
+
     loginView.hidden = true;
     appView.hidden = false;
+
+    updateScrollTopButton();
+
     await loadPhotos();
   }
 
   function showLogin(message = "") {
     appView.hidden = true;
     loginView.hidden = false;
+
+    updateScrollTopButton();
+
     if (message) {
       loginError.hidden = false;
       loginError.textContent = message;
@@ -139,7 +174,9 @@
 
     const { data, error } = await client
       .from(TABLE)
-      .select("id,storage_path,label,sort_order,paired_photo_id,created_at")
+      .select(
+        "id,storage_path,label,sort_order,paired_photo_id,created_at"
+      )
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true });
 
@@ -147,14 +184,25 @@
 
     if (error) {
       console.error(error);
+
       toast("Could not load photos.", "error");
-      photoGrid.innerHTML = '<div class="state-box" style="grid-column:1/-1"><strong>Could not load project photos.</strong><span>Make sure you ran the Supabase SQL.</span></div>';
+
+      photoGrid.innerHTML = `
+        <div
+          class="state-box"
+          style="grid-column:1/-1"
+        >
+          <strong>Could not load project photos.</strong>
+          <span>Make sure you ran the Supabase SQL.</span>
+        </div>
+      `;
+
       return;
     }
 
     photos = data || [];
 
-    // Keep linked Before/After photos beside each other when loading.
+    // Keep paired Before / After photos together.
     const visited = new Set();
     const normalized = [];
 
@@ -162,16 +210,23 @@
       if (visited.has(photo.id)) continue;
 
       visited.add(photo.id);
+
       const partner = photo.paired_photo_id
-        ? photos.find((item) => item.id === photo.paired_photo_id)
+        ? photos.find(
+            (item) => item.id === photo.paired_photo_id
+          )
         : null;
 
       if (partner && !visited.has(partner.id)) {
         visited.add(partner.id);
 
-        if (photo.label === "before") normalized.push(photo, partner);
-        else if (partner.label === "before") normalized.push(partner, photo);
-        else normalized.push(photo, partner);
+        if (photo.label === "before") {
+          normalized.push(photo, partner);
+        } else if (partner.label === "before") {
+          normalized.push(partner, photo);
+        } else {
+          normalized.push(photo, partner);
+        }
       } else {
         normalized.push(photo);
       }
@@ -187,86 +242,256 @@
 
   function render() {
     photoCount.textContent = photos.length;
+
     emptyState.hidden = photos.length !== 0;
-    photoGrid.innerHTML = photos.map((photo, index) => photoCard(photo, index)).join("");
+
+    photoGrid.innerHTML = photos
+      .map((photo, index) => photoCard(photo, index))
+      .join("");
+
     renderPreviews();
     wireCards();
     initSortable();
   }
 
-
   function pairedDescription(photo) {
-    if (!photo?.paired_photo_id) return "None";
-    const paired = photos.find((item) => item.id === photo.paired_photo_id);
-    if (!paired) return "Linked photo";
-    const pairIndex = photos.findIndex((item) => item.id === paired.id);
-    const pairLabel = paired.label === "before" ? "Before" : paired.label === "after" ? "After" : "—";
+    if (!photo?.paired_photo_id) {
+      return "None";
+    }
+
+    const paired = photos.find(
+      (item) => item.id === photo.paired_photo_id
+    );
+
+    if (!paired) {
+      return "Linked photo";
+    }
+
+    const pairIndex = photos.findIndex(
+      (item) => item.id === paired.id
+    );
+
+    const pairLabel =
+      paired.label === "before"
+        ? "Before"
+        : paired.label === "after"
+          ? "After"
+          : "—";
+
     return `${pairLabel} • Position ${pairIndex + 1}`;
   }
 
   function photoCard(photo, index) {
-    const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "—";
+    const label =
+      photo.label === "before"
+        ? "Before"
+        : photo.label === "after"
+          ? "After"
+          : "—";
+
     const src = publicUrl(photo.storage_path);
 
     return `
-      <article class="photo-card" data-id="${escapeHtml(photo.id)}">
+      <article
+        class="photo-card"
+        data-id="${escapeHtml(photo.id)}"
+      >
         <div class="photo-image-wrap">
-          <img src="${escapeHtml(src)}" alt="Project photo ${index + 1}" loading="lazy">
-          <span class="order-badge">${index + 1}</span>
-          ${photo.label === "before" || photo.label === "after" ? `<span class="label-badge">${label}</span>` : ""}
-          <button class="drag-handle" type="button" title="Drag to reorder" aria-label="Drag photo ${index + 1} to reorder">
+
+          <img
+            src="${escapeHtml(src)}"
+            alt="Project photo ${index + 1}"
+            loading="lazy"
+          >
+
+          <span class="order-badge">
+            ${index + 1}
+          </span>
+
+          ${
+            photo.label === "before" ||
+            photo.label === "after"
+              ? `
+                <span class="label-badge">
+                  ${label}
+                </span>
+              `
+              : ""
+          }
+
+          <button
+            class="drag-handle"
+            type="button"
+            title="Drag to reorder"
+            aria-label="Drag photo ${index + 1} to reorder"
+          >
             <i class="fa-solid fa-grip-vertical"></i>
           </button>
+
           <button
-            class="home-star ${index < 6 ? "featured" : ""}"
+            class="home-star ${
+              index < 6 ? "featured" : ""
+            }"
             type="button"
             data-featured
-            title="${index < 6 ? "Currently on homepage" : "Put this photo on homepage"}"
-            aria-label="${index < 6 ? `Photo ${index + 1} is currently on the homepage` : `Put photo ${index + 1} on the homepage`}"
+            title="${
+              index < 6
+                ? "Currently on homepage"
+                : "Put this photo on homepage"
+            }"
+            aria-label="${
+              index < 6
+                ? `Photo ${index + 1} is currently on the homepage`
+                : `Put photo ${index + 1} on the homepage`
+            }"
           >
-            <i class="${index < 6 ? "fa-solid" : "fa-regular"} fa-star"></i>
+            <i
+              class="${
+                index < 6
+                  ? "fa-solid"
+                  : "fa-regular"
+              } fa-star"
+            ></i>
           </button>
+
         </div>
+
         <div class="photo-body">
-          <div class="label-toggle" aria-label="Photo label">
-            <button type="button" data-label="before" class="${photo.label === "before" ? "active" : ""}">Before</button>
-            <button type="button" data-label="after" class="${photo.label === "after" ? "active" : ""}">After</button>
-            <button type="button" data-label="none" class="no-label-option ${photo.label !== "before" && photo.label !== "after" ? "active" : ""}" title="No label" aria-label="No Before or After label">-</button>
+
+          <div
+            class="label-toggle"
+            aria-label="Photo label"
+          >
+            <button
+              type="button"
+              data-label="before"
+              class="${
+                photo.label === "before"
+                  ? "active"
+                  : ""
+              }"
+            >
+              Before
+            </button>
+
+            <button
+              type="button"
+              data-label="after"
+              class="${
+                photo.label === "after"
+                  ? "active"
+                  : ""
+              }"
+            >
+              After
+            </button>
+
+            <button
+              type="button"
+              data-label="none"
+              class="no-label-option ${
+                photo.label !== "before" &&
+                photo.label !== "after"
+                  ? "active"
+                  : ""
+              }"
+              title="No label"
+              aria-label="No Before or After label"
+            >
+              -
+            </button>
           </div>
+
           <div class="card-actions">
-            <span class="card-position">Position ${index + 1}</span>
-            <div style="display:flex;gap:7px;align-items:center">
+
+            <span class="card-position">
+              Position ${index + 1}
+            </span>
+
+            <div
+              style="
+                display:flex;
+                gap:7px;
+                align-items:center;
+              "
+            >
+
               <button
-                class="pair-button ${photo.paired_photo_id ? "paired" : ""} ${photo.label !== "before" && photo.label !== "after" ? "disabled-pair" : ""}"
+                class="
+                  pair-button
+                  ${
+                    photo.paired_photo_id
+                      ? "paired"
+                      : ""
+                  }
+                  ${
+                    photo.label !== "before" &&
+                    photo.label !== "after"
+                      ? "disabled-pair"
+                      : ""
+                  }
+                "
                 type="button"
                 data-pair
-                title="${photo.label !== "before" && photo.label !== "after" ? "Choose Before or After before pairing" : photo.paired_photo_id ? "Change paired photo" : "Pair before and after"}"
+                title="${
+                  photo.label !== "before" &&
+                  photo.label !== "after"
+                    ? "Choose Before or After before pairing"
+                    : photo.paired_photo_id
+                      ? "Change paired photo"
+                      : "Pair before and after"
+                }"
               >
                 <i class="fa-solid fa-link"></i>
-                ${photo.paired_photo_id ? "Change Pair" : "Pair"}
+
+                ${
+                  photo.paired_photo_id
+                    ? "Change Pair"
+                    : "Pair"
+                }
               </button>
-              ${photo.paired_photo_id ? `
-                <button
-                  class="unpair-button"
-                  type="button"
-                  data-unpair
-                  title="Unpair these photos"
-                  aria-label="Unpair photo ${index + 1}"
-                >
-                  <i class="fa-solid fa-link-slash"></i>
-                  Unpair
-                </button>
-              ` : ""}
-              <button class="delete-button" type="button" data-delete title="Delete photo" aria-label="Delete photo ${index + 1}">
+
+              ${
+                photo.paired_photo_id
+                  ? `
+                    <button
+                      class="unpair-button"
+                      type="button"
+                      data-unpair
+                      title="Unpair these photos"
+                      aria-label="Unpair photo ${index + 1}"
+                    >
+                      <i class="fa-solid fa-link-slash"></i>
+                      Unpair
+                    </button>
+                  `
+                  : ""
+              }
+
+              <button
+                class="delete-button"
+                type="button"
+                data-delete
+                title="Delete photo"
+                aria-label="Delete photo ${index + 1}"
+              >
                 <i class="fa-regular fa-trash-can"></i>
               </button>
+
             </div>
           </div>
-          ${photo.paired_photo_id ? `
-            <div class="pair-meta">
-              <strong>Paired:</strong> ${pairedDescription(photo)}
-            </div>
-          ` : ""}
+
+          ${
+            photo.paired_photo_id
+              ? `
+                <div class="pair-meta">
+                  <strong>Paired:</strong>
+                  ${pairedDescription(photo)}
+                </div>
+              `
+              : ""
+          }
+
         </div>
       </article>
     `;
@@ -279,74 +504,158 @@
 
   function previewItems(limit) {
     const items = [];
+
     for (let i = 0; i < limit; i++) {
       const photo = photos[i];
+
       if (!photo) {
-        items.push(`<div class="preview-placeholder">${i + 1}</div>`);
+        items.push(`
+          <div class="preview-placeholder">
+            ${i + 1}
+          </div>
+        `);
+
         continue;
       }
-      const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "";
+
+      const label =
+        photo.label === "before"
+          ? "Before"
+          : photo.label === "after"
+            ? "After"
+            : "";
+
       items.push(`
         <div class="preview-photo">
-          <img src="${escapeHtml(publicUrl(photo.storage_path))}" alt="">
-          ${label ? `<span>${label}</span>` : ""}
+
+          <img
+            src="${escapeHtml(
+              publicUrl(photo.storage_path)
+            )}"
+            alt=""
+          >
+
+          ${
+            label
+              ? `<span>${label}</span>`
+              : ""
+          }
+
         </div>
       `);
     }
+
     return items.join("");
   }
 
-
-
   function openPairModal(photo) {
-    if (photo.label !== "before" && photo.label !== "after") {
-      toast("Choose Before or After before pairing this photo.", "error");
+    if (
+      photo.label !== "before" &&
+      photo.label !== "after"
+    ) {
+      toast(
+        "Choose Before or After before pairing this photo.",
+        "error"
+      );
+
       return;
     }
 
     pendingPairPhoto = photo;
-    selectedPairId = photo.paired_photo_id || null;
+    selectedPairId =
+      photo.paired_photo_id || null;
 
-    const targetLabel = photo.label === "before" ? "after" : "before";
+    const targetLabel =
+      photo.label === "before"
+        ? "after"
+        : "before";
+
     $("#pairModalCopy").textContent =
-      `This is marked ${photo.label.toUpperCase()}. Choose a ${targetLabel.toUpperCase()} photo to pair with it.`;
+      `This is marked ${photo.label.toUpperCase()}. ` +
+      `Choose a ${targetLabel.toUpperCase()} photo to pair with it.`;
 
-    const choices = photos.filter((item) =>
-      item.id !== photo.id &&
-      item.label === targetLabel
+    const choices = photos.filter(
+      (item) =>
+        item.id !== photo.id &&
+        item.label === targetLabel
     );
 
     pairChoices.innerHTML = choices.length
-      ? choices.map((item) => {
-          const index = photos.findIndex((x) => x.id === item.id);
-          const selected = selectedPairId === item.id;
-          return `
-            <button
-              type="button"
-              class="featured-choice ${selected ? "selected" : ""}"
-              data-pair-id="${escapeHtml(item.id)}"
-              aria-label="Pair with ${targetLabel} photo ${index + 1}"
-            >
-              <img src="${escapeHtml(publicUrl(item.storage_path))}" alt="${targetLabel} photo ${index + 1}">
-              <span>${index + 1}</span>
-              <em class="pair-choice-type">${targetLabel.toUpperCase()}</em>
-              <b class="featured-check"><i class="fa-solid fa-check"></i></b>
-            </button>
-          `;
-        }).join("")
-      : `<div class="featured-empty">No ${targetLabel} photos are available yet.</div>`;
+      ? choices
+          .map((item) => {
+            const index = photos.findIndex(
+              (x) => x.id === item.id
+            );
 
-    pairChoices.querySelectorAll("[data-pair-id]").forEach((button) => {
-      button.addEventListener("click", () => {
-        selectedPairId = button.dataset.pairId;
-        pairChoices.querySelectorAll(".featured-choice").forEach((choice) => {
-          choice.classList.toggle("selected", choice === button);
+            const selected =
+              selectedPairId === item.id;
+
+            return `
+              <button
+                type="button"
+                class="
+                  featured-choice
+                  ${selected ? "selected" : ""}
+                "
+                data-pair-id="${escapeHtml(item.id)}"
+                aria-label="
+                  Pair with ${targetLabel}
+                  photo ${index + 1}
+                "
+              >
+                <img
+                  src="${escapeHtml(
+                    publicUrl(item.storage_path)
+                  )}"
+                  alt="
+                    ${targetLabel}
+                    photo ${index + 1}
+                  "
+                >
+
+                <span>
+                  ${index + 1}
+                </span>
+
+                <em class="pair-choice-type">
+                  ${targetLabel.toUpperCase()}
+                </em>
+
+                <b class="featured-check">
+                  <i class="fa-solid fa-check"></i>
+                </b>
+              </button>
+            `;
+          })
+          .join("")
+      : `
+        <div class="featured-empty">
+          No ${targetLabel} photos are available yet.
+        </div>
+      `;
+
+    pairChoices
+      .querySelectorAll("[data-pair-id]")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedPairId =
+            button.dataset.pairId;
+
+          pairChoices
+            .querySelectorAll(".featured-choice")
+            .forEach((choice) => {
+              choice.classList.toggle(
+                "selected",
+                choice === button
+              );
+            });
+
+          savePair.disabled = false;
         });
-        savePair.disabled = false;
       });
-    });
 
     savePair.disabled = !selectedPairId;
+
     pairModal.hidden = false;
   }
 
@@ -357,57 +666,116 @@
     pairModal.hidden = true;
   }
 
-
   function orderPairBeforeAfter(firstId, secondId) {
-    const first = photos.find((item) => item.id === firstId);
-    const second = photos.find((item) => item.id === secondId);
-    if (!first || !second) return;
-
-    if (!["before", "after"].includes(first.label) || !["before", "after"].includes(second.label)) return;
-
-    const before = first.label === "before" ? first : second;
-    const after = before.id === first.id ? second : first;
-
-    const firstIndex = photos.findIndex((item) => item.id === first.id);
-    const secondIndex = photos.findIndex((item) => item.id === second.id);
-    const insertAt = Math.max(0, Math.min(firstIndex, secondIndex));
-
-    const remaining = photos.filter(
-      (item) => item.id !== first.id && item.id !== second.id
+    const first = photos.find(
+      (item) => item.id === firstId
     );
 
-    remaining.splice(insertAt, 0, before, after);
+    const second = photos.find(
+      (item) => item.id === secondId
+    );
 
-    photos = remaining.map((item, index) => ({
-      ...item,
-      sort_order: index + 1
-    }));
+    if (!first || !second) return;
+
+    if (
+      !["before", "after"].includes(first.label) ||
+      !["before", "after"].includes(second.label)
+    ) {
+      return;
+    }
+
+    const before =
+      first.label === "before"
+        ? first
+        : second;
+
+    const after =
+      before.id === first.id
+        ? second
+        : first;
+
+    const firstIndex = photos.findIndex(
+      (item) => item.id === first.id
+    );
+
+    const secondIndex = photos.findIndex(
+      (item) => item.id === second.id
+    );
+
+    const insertAt = Math.max(
+      0,
+      Math.min(firstIndex, secondIndex)
+    );
+
+    const remaining = photos.filter(
+      (item) =>
+        item.id !== first.id &&
+        item.id !== second.id
+    );
+
+    remaining.splice(
+      insertAt,
+      0,
+      before,
+      after
+    );
+
+    photos = remaining.map(
+      (item, index) => ({
+        ...item,
+        sort_order: index + 1
+      })
+    );
   }
 
   async function unpairPhoto(photo) {
     if (!photo?.paired_photo_id) return;
 
-    const otherId = photo.paired_photo_id;
+    const otherId =
+      photo.paired_photo_id;
 
-    const { error: firstError } = await client
-      .from(TABLE)
-      .update({ paired_photo_id: null })
-      .eq("id", photo.id);
-    if (firstError) throw firstError;
+    const { error: firstError } =
+      await client
+        .from(TABLE)
+        .update({
+          paired_photo_id: null
+        })
+        .eq("id", photo.id);
 
-    const { error: secondError } = await client
-      .from(TABLE)
-      .update({ paired_photo_id: null })
-      .eq("id", otherId)
-      .eq("paired_photo_id", photo.id);
-    if (secondError) throw secondError;
+    if (firstError) {
+      throw firstError;
+    }
+
+    const { error: secondError } =
+      await client
+        .from(TABLE)
+        .update({
+          paired_photo_id: null
+        })
+        .eq("id", otherId)
+        .eq(
+          "paired_photo_id",
+          photo.id
+        );
+
+    if (secondError) {
+      throw secondError;
+    }
   }
 
   function openFeaturedModal(photo) {
-    const index = photos.findIndex((item) => item.id === photo.id);
+    const index = photos.findIndex(
+      (item) => item.id === photo.id
+    );
 
-    if (index >= 0 && index < 6) {
-      toast(`This photo is already homepage slot ${index + 1}.`);
+    if (
+      index >= 0 &&
+      index < 6
+    ) {
+      toast(
+        `This photo is already homepage slot ${index + 1}.`
+      );
+
       return;
     }
 
@@ -415,31 +783,67 @@
     selectedFeaturedId = null;
     saveFeatured.disabled = true;
 
-    const currentSix = photos.slice(0, 6);
-    featuredChoices.innerHTML = currentSix.length
-      ? currentSix.map((item, slot) => `
-          <button
-            type="button"
-            class="featured-choice"
-            data-replace-id="${escapeHtml(item.id)}"
-            aria-label="Replace homepage photo ${slot + 1}"
-          >
-            <img src="${escapeHtml(publicUrl(item.storage_path))}" alt="Current homepage photo ${slot + 1}">
-            <span>${slot + 1}</span>
-            <b class="featured-check"><i class="fa-solid fa-check"></i></b>
-          </button>
-        `).join("")
-      : '<div class="featured-empty">There are no current homepage photos to replace yet.</div>';
+    const currentSix =
+      photos.slice(0, 6);
 
-    featuredChoices.querySelectorAll("[data-replace-id]").forEach((button) => {
-      button.addEventListener("click", () => {
-        selectedFeaturedId = button.dataset.replaceId;
-        featuredChoices.querySelectorAll(".featured-choice").forEach((choice) => {
-          choice.classList.toggle("selected", choice === button);
+    featuredChoices.innerHTML =
+      currentSix.length
+        ? currentSix
+            .map(
+              (item, slot) => `
+                <button
+                  type="button"
+                  class="featured-choice"
+                  data-replace-id="${escapeHtml(item.id)}"
+                  aria-label="
+                    Replace homepage photo ${slot + 1}
+                  "
+                >
+                  <img
+                    src="${escapeHtml(
+                      publicUrl(item.storage_path)
+                    )}"
+                    alt="
+                      Current homepage photo ${slot + 1}
+                    "
+                  >
+
+                  <span>
+                    ${slot + 1}
+                  </span>
+
+                  <b class="featured-check">
+                    <i class="fa-solid fa-check"></i>
+                  </b>
+                </button>
+              `
+            )
+            .join("")
+        : `
+          <div class="featured-empty">
+            There are no current homepage photos to replace yet.
+          </div>
+        `;
+
+    featuredChoices
+      .querySelectorAll("[data-replace-id]")
+      .forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedFeaturedId =
+            button.dataset.replaceId;
+
+          featuredChoices
+            .querySelectorAll(".featured-choice")
+            .forEach((choice) => {
+              choice.classList.toggle(
+                "selected",
+                choice === button
+              );
+            });
+
+          saveFeatured.disabled = false;
         });
-        saveFeatured.disabled = false;
       });
-    });
 
     featuredModal.hidden = false;
   }
@@ -452,342 +856,837 @@
   }
 
   async function persistPhotoOrder(order) {
-    for (let i = 0; i < order.length; i++) {
+    for (
+      let i = 0;
+      i < order.length;
+      i++
+    ) {
       const { error } = await client
         .from(TABLE)
-        .update({ sort_order: i + 1 })
+        .update({
+          sort_order: i + 1
+        })
         .eq("id", order[i].id);
-      if (error) throw error;
+
+      if (error) {
+        throw error;
+      }
     }
   }
 
   function wireCards() {
-    photoGrid.querySelectorAll("[data-unpair]").forEach((button) => {
-      button.addEventListener("click", async (event) => {
-        event.stopPropagation();
+    photoGrid
+      .querySelectorAll("[data-unpair]")
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          async (event) => {
+            event.stopPropagation();
 
-        const card = button.closest(".photo-card");
-        const photo = photos.find((item) => item.id === card.dataset.id);
-        if (!photo?.paired_photo_id) return;
+            const card =
+              button.closest(".photo-card");
 
-        const partner = photos.find((item) => item.id === photo.paired_photo_id);
-        const confirmed = window.confirm(
-          `Unpair this ${photo.label.toUpperCase()} photo${partner ? ` from its ${partner.label.toUpperCase()} photo` : ""}?`
+            const photo =
+              photos.find(
+                (item) =>
+                  item.id === card.dataset.id
+              );
+
+            if (
+              !photo?.paired_photo_id
+            ) {
+              return;
+            }
+
+            const partner =
+              photos.find(
+                (item) =>
+                  item.id ===
+                  photo.paired_photo_id
+              );
+
+            const confirmed =
+              window.confirm(
+                `Unpair this ${photo.label.toUpperCase()} photo${
+                  partner
+                    ? ` from its ${partner.label.toUpperCase()} photo`
+                    : ""
+                }?`
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            try {
+              await unpairPhoto(photo);
+
+              const partnerId =
+                photo.paired_photo_id;
+
+              photo.paired_photo_id =
+                null;
+
+              if (partnerId) {
+                const localPartner =
+                  photos.find(
+                    (item) =>
+                      item.id === partnerId
+                  );
+
+                if (localPartner) {
+                  localPartner.paired_photo_id =
+                    null;
+                }
+              }
+
+              render();
+
+              toast(
+                "Photos unpaired."
+              );
+            } catch (error) {
+              console.error(error);
+
+              toast(
+                "Could not unpair the photos.",
+                "error"
+              );
+            }
+          }
         );
-        if (!confirmed) return;
+      });
 
-        try {
-          await unpairPhoto(photo);
+    photoGrid
+      .querySelectorAll(".photo-card")
+      .forEach((card) => {
+        card.addEventListener(
+          "click",
+          (event) => {
+            if (
+              event.target.closest("button") ||
+              event.target.closest(".label-toggle")
+            ) {
+              return;
+            }
 
-          const partnerId = photo.paired_photo_id;
-          photo.paired_photo_id = null;
-          if (partnerId) {
-            const localPartner = photos.find((item) => item.id === partnerId);
-            if (localPartner) localPartner.paired_photo_id = null;
+            const id =
+              card.dataset.id;
+
+            const alreadySelected =
+              card.classList.contains(
+                "pair-selected"
+              );
+
+            if (alreadySelected) {
+              clearPairSelection();
+            } else {
+              highlightPair(
+                id,
+                false
+              );
+            }
           }
-
-          render();
-          toast("Photos unpaired.");
-        } catch (error) {
-          console.error(error);
-          toast("Could not unpair the photos.", "error");
-        }
+        );
       });
-    });
 
-    photoGrid.querySelectorAll(".photo-card").forEach((card) => {
-      card.addEventListener("click", (event) => {
-        if (
-          event.target.closest("button") ||
-          event.target.closest(".label-toggle")
-        ) return;
+    photoGrid
+      .querySelectorAll("[data-pair]")
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            const card =
+              button.closest(".photo-card");
 
-        const id = card.dataset.id;
-        const alreadySelected = card.classList.contains("pair-selected");
+            const photo =
+              photos.find(
+                (item) =>
+                  item.id === card.dataset.id
+              );
 
-        if (alreadySelected) clearPairSelection();
-        else highlightPair(id, false);
-      });
-    });
+            if (!photo) return;
 
-    photoGrid.querySelectorAll("[data-pair]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const card = button.closest(".photo-card");
-        const photo = photos.find((item) => item.id === card.dataset.id);
-        if (!photo) return;
-
-        openPairModal(photo);
-      });
-    });
-
-    photoGrid.querySelectorAll("[data-featured]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const card = button.closest(".photo-card");
-        const photo = photos.find((item) => item.id === card.dataset.id);
-        if (photo) openFeaturedModal(photo);
-      });
-    });
-
-    photoGrid.querySelectorAll("[data-label]").forEach((button) => {
-      button.addEventListener("click", async () => {
-        const card = button.closest(".photo-card");
-        const id = card.dataset.id;
-        const label = button.dataset.label;
-        const photo = photos.find((item) => item.id === id);
-        if (!photo || photo.label === label) return;
-
-        const oldLabel = photo.label;
-
-        if (label === "none" && photo.paired_photo_id) {
-          try {
-            const partnerId = photo.paired_photo_id;
-            await unpairPhoto(photo);
-            photo.paired_photo_id = null;
-            const partner = photos.find((item) => item.id === partnerId);
-            if (partner) partner.paired_photo_id = null;
-          } catch (unpairError) {
-            console.error(unpairError);
-            toast("Could not remove the existing pair.", "error");
-            return;
+            openPairModal(photo);
           }
-        }
+        );
+      });
 
-        photo.label = label;
-        render();
+    photoGrid
+      .querySelectorAll("[data-featured]")
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            const card =
+              button.closest(".photo-card");
 
-        const { error } = await client.from(TABLE).update({ label }).eq("id", id);
-        if (error) {
-          console.error(error);
-          photo.label = oldLabel;
-          render();
-          toast("Could not save the label.", "error");
-          return;
-        }
+            const photo =
+              photos.find(
+                (item) =>
+                  item.id === card.dataset.id
+              );
 
-        if (photo.paired_photo_id) {
-          orderPairBeforeAfter(photo.id, photo.paired_photo_id);
-          try {
-            await persistPhotoOrder(photos);
-          } catch (orderError) {
-            console.error(orderError);
+            if (photo) {
+              openFeaturedModal(photo);
+            }
           }
-          render();
-        }
-
-        toast(label === "none" ? "Photo label removed." : `Marked as ${label}.`);
+        );
       });
-    });
 
-    photoGrid.querySelectorAll("[data-delete]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const card = button.closest(".photo-card");
-        pendingDelete = photos.find((item) => item.id === card.dataset.id) || null;
-        if (pendingDelete) deleteModal.hidden = false;
+    photoGrid
+      .querySelectorAll("[data-label]")
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          async () => {
+            const card =
+              button.closest(".photo-card");
+
+            const id =
+              card.dataset.id;
+
+            const label =
+              button.dataset.label;
+
+            const photo =
+              photos.find(
+                (item) =>
+                  item.id === id
+              );
+
+            if (
+              !photo ||
+              photo.label === label
+            ) {
+              return;
+            }
+
+            const oldLabel =
+              photo.label;
+
+            if (
+              label === "none" &&
+              photo.paired_photo_id
+            ) {
+              try {
+                const partnerId =
+                  photo.paired_photo_id;
+
+                await unpairPhoto(
+                  photo
+                );
+
+                photo.paired_photo_id =
+                  null;
+
+                const partner =
+                  photos.find(
+                    (item) =>
+                      item.id === partnerId
+                  );
+
+                if (partner) {
+                  partner.paired_photo_id =
+                    null;
+                }
+              } catch (
+                unpairError
+              ) {
+                console.error(
+                  unpairError
+                );
+
+                toast(
+                  "Could not remove the existing pair.",
+                  "error"
+                );
+
+                return;
+              }
+            }
+
+            photo.label = label;
+
+            render();
+
+            const { error } =
+              await client
+                .from(TABLE)
+                .update({
+                  label
+                })
+                .eq("id", id);
+
+            if (error) {
+              console.error(
+                error
+              );
+
+              photo.label =
+                oldLabel;
+
+              render();
+
+              toast(
+                "Could not save the label.",
+                "error"
+              );
+
+              return;
+            }
+
+            if (
+              photo.paired_photo_id
+            ) {
+              orderPairBeforeAfter(
+                photo.id,
+                photo.paired_photo_id
+              );
+
+              try {
+                await persistPhotoOrder(
+                  photos
+                );
+              } catch (
+                orderError
+              ) {
+                console.error(
+                  orderError
+                );
+              }
+
+              render();
+            }
+
+            toast(
+              label === "none"
+                ? "Photo label removed."
+                : `Marked as ${label}.`
+            );
+          }
+        );
       });
-    });
-  }
 
+    photoGrid
+      .querySelectorAll("[data-delete]")
+      .forEach((button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            const card =
+              button.closest(".photo-card");
 
-  function getPairId(photo) {
-    return photo?.paired_photo_id || null;
+            pendingDelete =
+              photos.find(
+                (item) =>
+                  item.id === card.dataset.id
+              ) || null;
+
+            if (pendingDelete) {
+              deleteModal.hidden =
+                false;
+            }
+          }
+        );
+      });
   }
 
   function getPairMembers(photoId) {
-    const photo = photos.find((item) => item.id === photoId);
-    if (!photo) return [];
+    const photo =
+      photos.find(
+        (item) =>
+          item.id === photoId
+      );
+
+    if (!photo) {
+      return [];
+    }
 
     const ids = [photo.id];
-    if (photo.paired_photo_id) ids.push(photo.paired_photo_id);
+
+    if (photo.paired_photo_id) {
+      ids.push(
+        photo.paired_photo_id
+      );
+    }
 
     return ids
-      .map((id) => photos.find((item) => item.id === id))
+      .map((id) =>
+        photos.find(
+          (item) => item.id === id
+        )
+      )
       .filter(Boolean);
   }
 
   function clearPairSelection() {
-    photoGrid.querySelectorAll(".photo-card").forEach((card) => {
-      card.classList.remove("pair-selected", "pair-dragging");
-    });
+    photoGrid
+      .querySelectorAll(".photo-card")
+      .forEach((card) => {
+        card.classList.remove(
+          "pair-selected",
+          "pair-dragging"
+        );
+      });
   }
 
-  function highlightPair(photoId, dragging = false) {
+  function highlightPair(
+    photoId,
+    dragging = false
+  ) {
     clearPairSelection();
-    const members = getPairMembers(photoId);
 
-    members.forEach((member) => {
-      const card = photoGrid.querySelector(`.photo-card[data-id="${CSS.escape(member.id)}"]`);
-      if (!card) return;
-      card.classList.add("pair-selected");
-      if (dragging) card.classList.add("pair-dragging");
-    });
+    const members =
+      getPairMembers(photoId);
+
+    members.forEach(
+      (member) => {
+        const card =
+          photoGrid.querySelector(
+            `.photo-card[data-id="${CSS.escape(
+              member.id
+            )}"]`
+          );
+
+        if (!card) return;
+
+        card.classList.add(
+          "pair-selected"
+        );
+
+        if (dragging) {
+          card.classList.add(
+            "pair-dragging"
+          );
+        }
+      }
+    );
   }
 
-  function makePairsAdjacent(order, movedId) {
-    const moved = order.find((item) => item.id === movedId);
-    if (!moved?.paired_photo_id) return order;
+  function makePairsAdjacent(
+    order,
+    movedId
+  ) {
+    const moved =
+      order.find(
+        (item) =>
+          item.id === movedId
+      );
 
-    const partnerIndex = order.findIndex((item) => item.id === moved.paired_photo_id);
-    const movedIndex = order.findIndex((item) => item.id === moved.id);
+    if (
+      !moved?.paired_photo_id
+    ) {
+      return order;
+    }
 
-    if (partnerIndex < 0 || movedIndex < 0) return order;
+    const partnerIndex =
+      order.findIndex(
+        (item) =>
+          item.id ===
+          moved.paired_photo_id
+      );
 
-    const partner = order[partnerIndex];
-    let remaining = order.filter(
-      (item) => item.id !== moved.id && item.id !== partner.id
-    );
+    const movedIndex =
+      order.findIndex(
+        (item) =>
+          item.id === moved.id
+      );
 
-    // Keep BEFORE first and AFTER second inside a pair when possible.
+    if (
+      partnerIndex < 0 ||
+      movedIndex < 0
+    ) {
+      return order;
+    }
+
+    const partner =
+      order[partnerIndex];
+
+    let remaining =
+      order.filter(
+        (item) =>
+          item.id !== moved.id &&
+          item.id !== partner.id
+      );
+
     const pairBlock =
       moved.label === "before"
-        ? [moved, partner]
+        ? [
+            moved,
+            partner
+          ]
         : partner.label === "before"
-          ? [partner, moved]
-          : [moved, partner];
+          ? [
+              partner,
+              moved
+            ]
+          : [
+              moved,
+              partner
+            ];
 
-    // Determine target insertion point based on where the dragged card landed.
-    const originalVisibleOrder = [...photoGrid.querySelectorAll(".photo-card")]
-      .map((el) => el.dataset.id)
-      .filter((id) => id !== partner.id);
+    const originalVisibleOrder =
+      [
+        ...photoGrid.querySelectorAll(
+          ".photo-card"
+        )
+      ]
+        .map(
+          (el) =>
+            el.dataset.id
+        )
+        .filter(
+          (id) =>
+            id !== partner.id
+        );
 
-    let insertAt = originalVisibleOrder.indexOf(moved.id);
-    if (insertAt < 0) insertAt = remaining.length;
-    insertAt = Math.min(insertAt, remaining.length);
+    let insertAt =
+      originalVisibleOrder.indexOf(
+        moved.id
+      );
 
-    remaining.splice(insertAt, 0, ...pairBlock);
+    if (insertAt < 0) {
+      insertAt =
+        remaining.length;
+    }
+
+    insertAt =
+      Math.min(
+        insertAt,
+        remaining.length
+      );
+
+    remaining.splice(
+      insertAt,
+      0,
+      ...pairBlock
+    );
+
     return remaining;
   }
 
   function initSortable() {
-    if (sortable) sortable.destroy();
+    if (sortable) {
+      sortable.destroy();
+    }
 
-    sortable = new Sortable(photoGrid, {
-      animation: 180,
-      handle: ".drag-handle",
-      ghostClass: "sortable-ghost",
-      forceFallback: true,
-      fallbackOnBody: true,
+    sortable = new Sortable(
+      photoGrid,
+      {
+        animation: 180,
+        handle: ".drag-handle",
+        ghostClass: "sortable-ghost",
+        forceFallback: true,
+        fallbackOnBody: true,
 
-      onChoose: (event) => {
-        const id = event.item?.dataset?.id;
-        if (id) highlightPair(id, false);
-      },
+        onChoose: (event) => {
+          const id =
+            event.item?.dataset?.id;
 
-      onStart: (event) => {
-        const id = event.item?.dataset?.id;
-        if (id) highlightPair(id, true);
-      },
+          if (id) {
+            highlightPair(
+              id,
+              false
+            );
+          }
+        },
 
-      onUnchoose: () => {
-        clearPairSelection();
-      },
+        onStart: (event) => {
+          const id =
+            event.item?.dataset?.id;
 
-      onEnd: async (event) => {
-        const movedId = event.item?.dataset?.id;
+          if (id) {
+            highlightPair(
+              id,
+              true
+            );
+          }
+        },
 
-        const ids = [...photoGrid.querySelectorAll(".photo-card")]
-          .map((el) => el.dataset.id);
+        onUnchoose: () => {
+          clearPairSelection();
+        },
 
-        const byId = new Map(photos.map((photo) => [photo.id, photo]));
-        let reordered = ids.map((id) => byId.get(id)).filter(Boolean);
+        onEnd: async (event) => {
+          const movedId =
+            event.item?.dataset?.id;
 
-        if (movedId) {
-          reordered = makePairsAdjacent(reordered, movedId);
-        }
-
-        photos = reordered.map((photo, index) => ({
-          ...photo,
-          sort_order: index + 1
-        }));
-
-        render();
-
-        try {
-          await persistPhotoOrder(photos);
-          toast(
-            getPairMembers(movedId).length > 1
-              ? "Paired photos moved together."
-              : "Photo order saved."
+          const ids = [
+            ...photoGrid.querySelectorAll(
+              ".photo-card"
+            )
+          ].map(
+            (el) =>
+              el.dataset.id
           );
-        } catch (error) {
-          console.error(error);
-          toast("Could not save the new order.", "error");
-          await loadPhotos();
+
+          const byId =
+            new Map(
+              photos.map(
+                (photo) => [
+                  photo.id,
+                  photo
+                ]
+              )
+            );
+
+          let reordered =
+            ids
+              .map(
+                (id) =>
+                  byId.get(id)
+              )
+              .filter(Boolean);
+
+          if (movedId) {
+            reordered =
+              makePairsAdjacent(
+                reordered,
+                movedId
+              );
+          }
+
+          photos =
+            reordered.map(
+              (
+                photo,
+                index
+              ) => ({
+                ...photo,
+                sort_order:
+                  index + 1
+              })
+            );
+
+          render();
+
+          try {
+            await persistPhotoOrder(
+              photos
+            );
+
+            toast(
+              getPairMembers(
+                movedId
+              ).length > 1
+                ? "Paired photos moved together."
+                : "Photo order saved."
+            );
+          } catch (error) {
+            console.error(
+              error
+            );
+
+            toast(
+              "Could not save the new order.",
+              "error"
+            );
+
+            await loadPhotos();
+          }
         }
       }
-    });
+    );
   }
 
   async function saveNewOrder() {
-    const ids = [...photoGrid.querySelectorAll(".photo-card")].map((el) => el.dataset.id);
-    const byId = new Map(photos.map((photo) => [photo.id, photo]));
-    const reordered = ids.map((id) => byId.get(id)).filter(Boolean);
-    const previous = photos.slice();
+    const ids = [
+      ...photoGrid.querySelectorAll(
+        ".photo-card"
+      )
+    ].map(
+      (el) =>
+        el.dataset.id
+    );
 
-    photos = reordered.map((photo, index) => ({ ...photo, sort_order: index + 1 }));
+    const byId =
+      new Map(
+        photos.map(
+          (photo) => [
+            photo.id,
+            photo
+          ]
+        )
+      );
+
+    const reordered =
+      ids
+        .map(
+          (id) =>
+            byId.get(id)
+        )
+        .filter(Boolean);
+
+    const previous =
+      photos.slice();
+
+    photos =
+      reordered.map(
+        (
+          photo,
+          index
+        ) => ({
+          ...photo,
+          sort_order:
+            index + 1
+        })
+      );
+
     render();
 
     try {
-      await persistPhotoOrder(photos);
-      toast("Photo order saved.");
+      await persistPhotoOrder(
+        photos
+      );
+
+      toast(
+        "Photo order saved."
+      );
     } catch (error) {
-      console.error(error);
-      photos = previous;
+      console.error(
+        error
+      );
+
+      photos =
+        previous;
+
       render();
-      toast("Could not save the new order.", "error");
+
+      toast(
+        "Could not save the new order.",
+        "error"
+      );
     }
   }
 
   function safeFilename(name) {
-    const dot = name.lastIndexOf(".");
-    const extension = dot >= 0 ? name.slice(dot).toLowerCase() : "";
-    const base = (dot >= 0 ? name.slice(0, dot) : name)
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "photo";
+    const dot =
+      name.lastIndexOf(".");
+
+    const extension =
+      dot >= 0
+        ? name
+            .slice(dot)
+            .toLowerCase()
+        : "";
+
+    const base =
+      (
+        dot >= 0
+          ? name.slice(0, dot)
+          : name
+      )
+        .toLowerCase()
+        .replace(
+          /[^a-z0-9]+/g,
+          "-"
+        )
+        .replace(
+          /^-+|-+$/g,
+          ""
+        )
+        .slice(0, 60) ||
+      "photo";
+
     return `${base}${extension}`;
   }
 
   async function uploadFiles(files) {
-    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
-    const valid = files.filter((file) => allowed.has(file.type) && file.size <= 10 * 1024 * 1024);
+    const allowed =
+      new Set([
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/avif"
+      ]);
+
+    const valid =
+      files.filter(
+        (file) =>
+          allowed.has(file.type) &&
+          file.size <=
+            10 *
+              1024 *
+              1024
+      );
 
     if (!valid.length) {
-      toast("Choose JPG, PNG, WEBP, or AVIF images under 10 MB.", "error");
+      toast(
+        "Choose JPG, PNG, WEBP, or AVIF images under 10 MB.",
+        "error"
+      );
+
       return;
     }
 
-    const label = document.querySelector(".upload-button");
-    label.style.pointerEvents = "none";
-    label.style.opacity = ".6";
+    const uploadButton =
+      document.querySelector(
+        ".upload-button"
+      );
 
-    let nextOrder = photos.length + 1;
+    uploadButton.style.pointerEvents =
+      "none";
+
+    uploadButton.style.opacity =
+      ".6";
+
+    let nextOrder =
+      photos.length + 1;
+
     let uploaded = 0;
 
     try {
-      for (const file of valid) {
-        const storagePath = `projects/${crypto.randomUUID()}-${safeFilename(file.name)}`;
+      for (
+        const file of valid
+      ) {
+        const storagePath =
+          `projects/${crypto.randomUUID()}-${safeFilename(
+            file.name
+          )}`;
 
-        const { error: uploadError } = await client.storage
+        const {
+          error: uploadError
+        } = await client.storage
           .from(BUCKET)
-          .upload(storagePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type
-          });
+          .upload(
+            storagePath,
+            file,
+            {
+              cacheControl:
+                "3600",
+              upsert: false,
+              contentType:
+                file.type
+            }
+          );
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          throw uploadError;
+        }
 
-        const { error: insertError } = await client
+        const {
+          error: insertError
+        } = await client
           .from(TABLE)
           .insert({
-            storage_path: storagePath,
-            label: "none",
-            sort_order: nextOrder
+            storage_path:
+              storagePath,
+
+            label:
+              "none",
+
+            sort_order:
+              nextOrder
           });
 
         if (insertError) {
-          await client.storage.from(BUCKET).remove([storagePath]);
+          await client.storage
+            .from(BUCKET)
+            .remove([
+              storagePath
+            ]);
+
           throw insertError;
         }
 
@@ -796,283 +1695,750 @@
       }
 
       await loadPhotos();
-      toast(`${uploaded} photo${uploaded === 1 ? "" : "s"} uploaded.`);
+
+      toast(
+        `${uploaded} photo${
+          uploaded === 1
+            ? ""
+            : "s"
+        } uploaded.`
+      );
     } catch (error) {
       console.error(error);
-      toast(error.message || "Upload failed.", "error");
+
+      toast(
+        error.message ||
+          "Upload failed.",
+        "error"
+      );
+
       await loadPhotos();
     } finally {
-      label.style.pointerEvents = "";
-      label.style.opacity = "";
-      fileInput.value = "";
+      uploadButton.style.pointerEvents =
+        "";
+
+      uploadButton.style.opacity =
+        "";
+
+      fileInput.value =
+        "";
     }
   }
 
-  loginForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    loginError.hidden = true;
-    setBusy(loginButton, true);
+  loginForm.addEventListener(
+    "submit",
+    async (event) => {
+      event.preventDefault();
 
-    const email = emailInput.value.trim();
-    const password = $("#password").value;
+      loginError.hidden =
+        true;
 
-    try {
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      setBusy(
+        loginButton,
+        true
+      );
 
-      if (error) {
-        loginError.hidden = false;
-        loginError.textContent = error.message || "Could not sign in. Check your email and password.";
+      const email =
+        emailInput.value.trim();
+
+      const password =
+        $("#password").value;
+
+      try {
+        const {
+          data,
+          error
+        } =
+          await client.auth
+            .signInWithPassword({
+              email,
+              password
+            });
+
+        if (error) {
+          loginError.hidden =
+            false;
+
+          loginError.textContent =
+            error.message ||
+            "Could not sign in. Check your email and password.";
+
+          return;
+        }
+
+        if (
+          saveEmailCheckbox.checked
+        ) {
+          window.localStorage
+            .setItem(
+              SAVED_EMAIL_KEY,
+              email
+            );
+        } else {
+          window.localStorage
+            .removeItem(
+              SAVED_EMAIL_KEY
+            );
+        }
+
+        appSessionUserId =
+          data.session
+            ?.user?.id ||
+          null;
+
+        await enterApp(
+          data.session
+        );
+      } catch (error) {
+        console.error(
+          "Sign in failed:",
+          error
+        );
+
+        loginError.hidden =
+          false;
+
+        loginError.textContent =
+          error?.message ||
+          "Could not sign in. Please try again.";
+      } finally {
+        setBusy(
+          loginButton,
+          false
+        );
+      }
+    }
+  );
+
+  $("#togglePassword")
+    .addEventListener(
+      "click",
+      () => {
+        const input =
+          $("#password");
+
+        const icon =
+          $("#togglePassword i");
+
+        const showing =
+          input.type ===
+          "text";
+
+        input.type =
+          showing
+            ? "password"
+            : "text";
+
+        icon.className =
+          showing
+            ? "fa-regular fa-eye"
+            : "fa-regular fa-eye-slash";
+      }
+    );
+
+  $("#signOutButton")
+    .addEventListener(
+      "click",
+      async () => {
+        await client.auth.signOut();
+
+        appSessionUserId =
+          null;
+
+        photos = [];
+
+        showLogin();
+      }
+    );
+
+  fileInput.addEventListener(
+    "change",
+    () =>
+      uploadFiles([
+        ...fileInput.files
+      ])
+  );
+
+  $("#cancelPair")
+    .addEventListener(
+      "click",
+      closePairModal
+    );
+
+  savePair.addEventListener(
+    "click",
+    async () => {
+      if (
+        !pendingPairPhoto ||
+        !selectedPairId
+      ) {
         return;
       }
 
-      if (saveEmailCheckbox.checked) {
-        window.localStorage.setItem(SAVED_EMAIL_KEY, email);
-      } else {
-        window.localStorage.removeItem(SAVED_EMAIL_KEY);
+      const photo =
+        pendingPairPhoto;
+
+      const other =
+        photos.find(
+          (item) =>
+            item.id ===
+            selectedPairId
+        );
+
+      if (!other) return;
+
+      if (
+        photo.label ===
+        other.label
+      ) {
+        toast(
+          "Before photos can only pair with After photos.",
+          "error"
+        );
+
+        return;
       }
 
-      appSessionUserId = data.session?.user?.id || null;
-      await enterApp(data.session);
-    } catch (error) {
-      console.error("Sign in failed:", error);
-      loginError.hidden = false;
-      loginError.textContent = error?.message || "Could not sign in. Please try again.";
-    } finally {
-      setBusy(loginButton, false);
+      setBusy(
+        savePair,
+        true
+      );
+
+      try {
+        if (
+          photo.paired_photo_id &&
+          photo.paired_photo_id !==
+            other.id
+        ) {
+          await unpairPhoto(
+            photo
+          );
+        }
+
+        if (
+          other.paired_photo_id &&
+          other.paired_photo_id !==
+            photo.id
+        ) {
+          await unpairPhoto(
+            other
+          );
+        }
+
+        const {
+          error: firstError
+        } = await client
+          .from(TABLE)
+          .update({
+            paired_photo_id:
+              other.id
+          })
+          .eq(
+            "id",
+            photo.id
+          );
+
+        if (firstError) {
+          throw firstError;
+        }
+
+        const {
+          error: secondError
+        } = await client
+          .from(TABLE)
+          .update({
+            paired_photo_id:
+              photo.id
+          })
+          .eq(
+            "id",
+            other.id
+          );
+
+        if (secondError) {
+          throw secondError;
+        }
+
+        photo.paired_photo_id =
+          other.id;
+
+        other.paired_photo_id =
+          photo.id;
+
+        orderPairBeforeAfter(
+          photo.id,
+          other.id
+        );
+
+        await persistPhotoOrder(
+          photos
+        );
+
+        closePairModal();
+
+        render();
+
+        toast(
+          "Paired — Before is first, After is second."
+        );
+      } catch (error) {
+        console.error(
+          error
+        );
+
+        toast(
+          "Could not save the pair.",
+          "error"
+        );
+      } finally {
+        setBusy(
+          savePair,
+          false
+        );
+      }
     }
-  });
+  );
 
-  $("#togglePassword").addEventListener("click", () => {
-    const input = $("#password");
-    const icon = $("#togglePassword i");
-    const showing = input.type === "text";
-    input.type = showing ? "password" : "text";
-    icon.className = showing ? "fa-regular fa-eye" : "fa-regular fa-eye-slash";
-  });
-
-  $("#signOutButton").addEventListener("click", async () => {
-    await client.auth.signOut();
-    photos = [];
-    showLogin();
-  });
-
-  fileInput.addEventListener("change", () => uploadFiles([...fileInput.files]));
-
-
-
-  $("#cancelPair").addEventListener("click", closePairModal);
-
-  savePair.addEventListener("click", async () => {
-    if (!pendingPairPhoto || !selectedPairId) return;
-
-    const photo = pendingPairPhoto;
-    const other = photos.find((item) => item.id === selectedPairId);
-    if (!other) return;
-
-    if (photo.label === other.label) {
-      toast("Before photos can only pair with After photos.", "error");
-      return;
+  pairModal.addEventListener(
+    "click",
+    (event) => {
+      if (
+        event.target ===
+        pairModal
+      ) {
+        closePairModal();
+      }
     }
+  );
 
-    setBusy(savePair, true);
+  $("#cancelFeatured")
+    .addEventListener(
+      "click",
+      closeFeaturedModal
+    );
 
-    try {
-      // Clear previous pair on this photo, if any.
-      if (photo.paired_photo_id && photo.paired_photo_id !== other.id) {
-        await unpairPhoto(photo);
+  saveFeatured.addEventListener(
+    "click",
+    async () => {
+      if (
+        !pendingFeaturedPhoto ||
+        !selectedFeaturedId
+      ) {
+        return;
       }
 
-      // Clear previous pair on the selected counterpart, if any.
-      if (other.paired_photo_id && other.paired_photo_id !== photo.id) {
-        await unpairPhoto(other);
+      const incomingIndex =
+        photos.findIndex(
+          (item) =>
+            item.id ===
+            pendingFeaturedPhoto.id
+        );
+
+      const replaceIndex =
+        photos.findIndex(
+          (item) =>
+            item.id ===
+            selectedFeaturedId
+        );
+
+      if (
+        incomingIndex < 0 ||
+        replaceIndex < 0 ||
+        replaceIndex >= 6
+      ) {
+        return;
       }
 
-      const { error: firstError } = await client
-        .from(TABLE)
-        .update({ paired_photo_id: other.id })
-        .eq("id", photo.id);
-      if (firstError) throw firstError;
+      const previous =
+        photos.map(
+          (item) => ({
+            ...item
+          })
+        );
 
-      const { error: secondError } = await client
-        .from(TABLE)
-        .update({ paired_photo_id: photo.id })
-        .eq("id", other.id);
-      if (secondError) throw secondError;
+      const incoming =
+        photos[incomingIndex];
 
-      // Update local pair state, then force BEFORE first and AFTER second.
-      photo.paired_photo_id = other.id;
-      other.paired_photo_id = photo.id;
-      orderPairBeforeAfter(photo.id, other.id);
-      await persistPhotoOrder(photos);
+      const outgoing =
+        photos[replaceIndex];
 
-      closePairModal();
-      render();
-      toast("Paired — Before is first, After is second.");
-    } catch (error) {
-      console.error(error);
-      toast("Could not save the pair.", "error");
-    } finally {
-      setBusy(savePair, false);
+      photos[replaceIndex] =
+        incoming;
+
+      photos[incomingIndex] =
+        outgoing;
+
+      photos =
+        photos.map(
+          (
+            item,
+            index
+          ) => ({
+            ...item,
+            sort_order:
+              index + 1
+          })
+        );
+
+      setBusy(
+        saveFeatured,
+        true
+      );
+
+      try {
+        await persistPhotoOrder(
+          photos
+        );
+
+        closeFeaturedModal();
+
+        render();
+
+        toast(
+          `Homepage photo ${replaceIndex + 1} switched.`
+        );
+      } catch (error) {
+        console.error(
+          error
+        );
+
+        photos =
+          previous;
+
+        render();
+
+        toast(
+          "Could not switch the homepage photo.",
+          "error"
+        );
+      } finally {
+        setBusy(
+          saveFeatured,
+          false
+        );
+      }
     }
-  });
+  );
 
-  pairModal.addEventListener("click", (event) => {
-    if (event.target === pairModal) closePairModal();
-  });
-
-  $("#cancelFeatured").addEventListener("click", closeFeaturedModal);
-
-  saveFeatured.addEventListener("click", async () => {
-    if (!pendingFeaturedPhoto || !selectedFeaturedId) return;
-
-    const incomingIndex = photos.findIndex((item) => item.id === pendingFeaturedPhoto.id);
-    const replaceIndex = photos.findIndex((item) => item.id === selectedFeaturedId);
-    if (incomingIndex < 0 || replaceIndex < 0 || replaceIndex >= 6) return;
-
-    const previous = photos.map((item) => ({ ...item }));
-    const incoming = photos[incomingIndex];
-    const outgoing = photos[replaceIndex];
-
-    photos[replaceIndex] = incoming;
-    photos[incomingIndex] = outgoing;
-    photos = photos.map((item, index) => ({ ...item, sort_order: index + 1 }));
-
-    setBusy(saveFeatured, true);
-    try {
-      await persistPhotoOrder(photos);
-      closeFeaturedModal();
-      render();
-      toast(`Homepage photo ${replaceIndex + 1} switched.`);
-    } catch (error) {
-      console.error(error);
-      photos = previous;
-      render();
-      toast("Could not switch the homepage photo.", "error");
-    } finally {
-      setBusy(saveFeatured, false);
+  featuredModal.addEventListener(
+    "click",
+    (event) => {
+      if (
+        event.target ===
+        featuredModal
+      ) {
+        closeFeaturedModal();
+      }
     }
-  });
+  );
 
-  featuredModal.addEventListener("click", (event) => {
-    if (event.target === featuredModal) closeFeaturedModal();
-  });
+  $("#cancelDelete")
+    .addEventListener(
+      "click",
+      () => {
+        pendingDelete =
+          null;
 
-  $("#cancelDelete").addEventListener("click", () => {
-    pendingDelete = null;
-    deleteModal.hidden = true;
-  });
+        deleteModal.hidden =
+          true;
+      }
+    );
 
-  $("#confirmDelete").addEventListener("click", async () => {
-    if (!pendingDelete) return;
-    const button = $("#confirmDelete");
-    setBusy(button, true);
+  $("#confirmDelete")
+    .addEventListener(
+      "click",
+      async () => {
+        if (!pendingDelete) {
+          return;
+        }
 
-    const target = pendingDelete;
-    const { error: rowError } = await client.from(TABLE).delete().eq("id", target.id);
+        const button =
+          $("#confirmDelete");
 
-    if (rowError) {
-      console.error(rowError);
-      setBusy(button, false);
-      toast("Could not delete the photo.", "error");
-      return;
+        setBusy(
+          button,
+          true
+        );
+
+        const target =
+          pendingDelete;
+
+        const {
+          error: rowError
+        } = await client
+          .from(TABLE)
+          .delete()
+          .eq(
+            "id",
+            target.id
+          );
+
+        if (rowError) {
+          console.error(
+            rowError
+          );
+
+          setBusy(
+            button,
+            false
+          );
+
+          toast(
+            "Could not delete the photo.",
+            "error"
+          );
+
+          return;
+        }
+
+        const {
+          error: storageError
+        } =
+          await client.storage
+            .from(BUCKET)
+            .remove([
+              target.storage_path
+            ]);
+
+        if (storageError) {
+          console.warn(
+            "Photo row deleted, but storage cleanup failed:",
+            storageError
+          );
+        }
+
+        pendingDelete =
+          null;
+
+        deleteModal.hidden =
+          true;
+
+        setBusy(
+          button,
+          false
+        );
+
+        await loadPhotos();
+
+        await saveNewOrder();
+
+        toast(
+          "Photo deleted."
+        );
+      }
+    );
+
+  deleteModal.addEventListener(
+    "click",
+    (event) => {
+      if (
+        event.target ===
+        deleteModal
+      ) {
+        pendingDelete =
+          null;
+
+        deleteModal.hidden =
+          true;
+      }
     }
+  );
 
-    const { error: storageError } = await client.storage.from(BUCKET).remove([target.storage_path]);
-    if (storageError) console.warn("Photo row deleted, but storage cleanup failed:", storageError);
+  $("#menuButton")
+    ?.addEventListener(
+      "click",
+      () => {
+        $("#sidebar")
+          ?.classList
+          .add("open");
 
-    pendingDelete = null;
-    deleteModal.hidden = true;
-    setBusy(button, false);
-    await loadPhotos();
-    await saveNewOrder();
-    toast("Photo deleted.");
-  });
+        $("#sidebarBackdrop")
+          ?.classList
+          .add("show");
+      }
+    );
 
-  deleteModal.addEventListener("click", (event) => {
-    if (event.target === deleteModal) {
-      pendingDelete = null;
-      deleteModal.hidden = true;
-    }
-  });
+  $("#sidebarBackdrop")
+    ?.addEventListener(
+      "click",
+      () => {
+        $("#sidebar")
+          ?.classList
+          .remove("open");
 
-  $("#menuButton").addEventListener("click", () => {
-    $("#sidebar").classList.add("open");
-    $("#sidebarBackdrop").classList.add("show");
-  });
+        $("#sidebarBackdrop")
+          ?.classList
+          .remove("show");
+      }
+    );
 
-  $("#sidebarBackdrop").addEventListener("click", () => {
-    $("#sidebar").classList.remove("open");
-    $("#sidebarBackdrop").classList.remove("show");
-  });
+  document
+    .querySelectorAll(
+      "[data-scroll]"
+    )
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        () => {
+          document
+            .getElementById(
+              button.dataset.scroll
+            )
+            ?.scrollIntoView({
+              behavior:
+                "smooth",
 
-  document.querySelectorAll("[data-scroll]").forEach((button) => {
-    button.addEventListener("click", () => {
-      document.getElementById(button.dataset.scroll)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      $("#sidebar").classList.remove("open");
-      $("#sidebarBackdrop").classList.remove("show");
+              block:
+                "start"
+            });
+
+          $("#sidebar")
+            ?.classList
+            .remove("open");
+
+          $("#sidebarBackdrop")
+            ?.classList
+            .remove("show");
+        }
+      );
     });
-  });
 
-
-  const scrollTopButton = $("#scrollTopButton");
+  const scrollTopButton =
+    $("#scrollTopButton");
 
   function updateScrollTopButton() {
-    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    const shouldShow = scrollY > 180 && !appView.hidden;
-
-    scrollTopButton.hidden = false;
-    scrollTopButton.classList.toggle("show", shouldShow);
-    scrollTopButton.setAttribute("aria-hidden", shouldShow ? "false" : "true");
-  }
-
-  scrollTopButton.addEventListener("click", () => {
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth"
-    });
-  });
-
-  window.addEventListener("scroll", updateScrollTopButton, { passive: true });
-  window.addEventListener("resize", updateScrollTopButton);
-  window.requestAnimationFrame(updateScrollTopButton);
-
-  let appSessionUserId = null;
-
-  client.auth.onAuthStateChange((event, session) => {
-    if (event === "SIGNED_OUT") {
-      appSessionUserId = null;
-      photos = [];
-      showLogin();
+    if (!scrollTopButton) {
       return;
     }
 
-    if (session?.user) {
-      appSessionUserId = session.user.id;
+    const scrollY =
+      window.scrollY ||
+      document.documentElement
+        .scrollTop ||
+      0;
+
+    const shouldShow =
+      scrollY > 180 &&
+      !appView.hidden;
+
+    scrollTopButton.hidden =
+      false;
+
+    scrollTopButton
+      .classList
+      .toggle(
+        "show",
+        shouldShow
+      );
+
+    scrollTopButton
+      .setAttribute(
+        "aria-hidden",
+        shouldShow
+          ? "false"
+          : "true"
+      );
+  }
+
+  scrollTopButton
+    ?.addEventListener(
+      "click",
+      () => {
+        window.scrollTo({
+          top: 0,
+          behavior: "smooth"
+        });
+      }
+    );
+
+  window.addEventListener(
+    "scroll",
+    updateScrollTopButton,
+    {
+      passive: true
     }
-  });
+  );
+
+  window.addEventListener(
+    "resize",
+    updateScrollTopButton
+  );
+
+  window.requestAnimationFrame(
+    updateScrollTopButton
+  );
+
+  client.auth.onAuthStateChange(
+    (event, session) => {
+      if (
+        event === "SIGNED_OUT"
+      ) {
+        appSessionUserId =
+          null;
+
+        photos = [];
+
+        showLogin();
+
+        return;
+      }
+
+      if (session?.user) {
+        appSessionUserId =
+          session.user.id;
+      }
+    }
+  );
 
   (async function boot() {
-    const savedEmail = window.localStorage.getItem(SAVED_EMAIL_KEY);
+    const savedEmail =
+      window.localStorage.getItem(
+        SAVED_EMAIL_KEY
+      );
+
     if (savedEmail) {
-      emailInput.value = savedEmail;
-      saveEmailCheckbox.checked = true;
+      emailInput.value =
+        savedEmail;
+
+      saveEmailCheckbox.checked =
+        true;
     } else {
-      saveEmailCheckbox.checked = false;
+      saveEmailCheckbox.checked =
+        false;
     }
 
     try {
-      const { data, error } = await client.auth.getSession();
-      if (error) throw error;
+      const {
+        data,
+        error
+      } =
+        await client.auth
+          .getSession();
 
-      if (data.session?.user) {
-        appSessionUserId = data.session.user.id;
-        await enterApp(data.session);
+      if (error) {
+        throw error;
+      }
+
+      if (
+        data.session?.user
+      ) {
+        appSessionUserId =
+          data.session.user.id;
+
+        await enterApp(
+          data.session
+        );
+
         return;
       }
 
       showLogin();
     } catch (error) {
-      console.error("Could not restore saved login session:", error);
+      console.error(
+        "Could not restore saved login session:",
+        error
+      );
+
       showLogin();
     }
   })();
