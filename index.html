@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261004-4">
+  <link rel="stylesheet" href="css.css?v=20261004-5">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -48,6 +48,14 @@
               <i class="fa-regular fa-eye"></i>
             </button>
           </div>
+        </label>
+
+        <label class="save-email-row" for="saveEmail">
+          <input id="saveEmail" type="checkbox">
+          <span class="save-email-check" aria-hidden="true">
+            <i class="fa-solid fa-check"></i>
+          </span>
+          <span>Save email for login to this device</span>
         </label>
 
         <button id="loginButton" class="primary wide" type="submit">
@@ -237,7 +245,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261004-4"></script>
+  <script src="js.js?v=20261004-5"></script>
 
   <button id="scrollTopButton" class="scroll-top-button" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fa-solid fa-arrow-up"></i>
