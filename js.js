@@ -11,7 +11,8 @@
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: window.localStorage
+      storage: window.localStorage,
+      storageKey: "dfl-admin-auth"
     }
   });
 
@@ -830,6 +831,7 @@
       window.localStorage.removeItem(SAVED_EMAIL_KEY);
     }
 
+    appSessionUserId = data.session?.user?.id || null;
     await enterApp(data.session);
   });
 
@@ -1027,8 +1029,24 @@
   window.addEventListener("resize", updateScrollTopButton);
   window.requestAnimationFrame(updateScrollTopButton);
 
-  client.auth.onAuthStateChange((_event, session) => {
-    if (!session) showLogin();
+  let appSessionUserId = null;
+
+  client.auth.onAuthStateChange(async (event, session) => {
+    if (event === "SIGNED_OUT") {
+      appSessionUserId = null;
+      photos = [];
+      showLogin();
+      return;
+    }
+
+    if (
+      session?.user &&
+      (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") &&
+      appSessionUserId !== session.user.id
+    ) {
+      appSessionUserId = session.user.id;
+      await enterApp(session);
+    }
   });
 
   (async function boot() {
@@ -1040,8 +1058,20 @@
       saveEmailCheckbox.checked = false;
     }
 
-    const { data } = await client.auth.getSession();
-    if (data.session) await enterApp(data.session);
-    else showLogin();
+    try {
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+
+      if (data.session?.user) {
+        appSessionUserId = data.session.user.id;
+        await enterApp(data.session);
+        return;
+      }
+
+      showLogin();
+    } catch (error) {
+      console.error("Could not restore saved login session:", error);
+      showLogin();
+    }
   })();
 })();
