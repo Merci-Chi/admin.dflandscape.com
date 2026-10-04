@@ -988,6 +988,28 @@
     });
   });
 
+
+  const scrollTopButton = $("#scrollTopButton");
+
+  function updateScrollTopButton() {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    const shouldShow = scrollY > 260 && !appShell.hidden;
+
+    scrollTopButton.hidden = false;
+    scrollTopButton.classList.toggle("show", shouldShow);
+    scrollTopButton.setAttribute("aria-hidden", shouldShow ? "false" : "true");
+  }
+
+  scrollTopButton.addEventListener("click", () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
+  });
+
+  window.addEventListener("scroll", updateScrollTopButton, { passive: true });
+  window.addEventListener("resize", updateScrollTopButton);
+
   client.auth.onAuthStateChange((_event, session) => {
     if (!session) showLogin();
   });
