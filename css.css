@@ -1333,3 +1333,7 @@ button,
   outline:3px solid rgba(18,59,42,.14);
   outline-offset:2px;
 }
+
+.signout-near-nav{
+  margin-top:8px;
+}
