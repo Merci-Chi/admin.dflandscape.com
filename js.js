@@ -220,7 +220,7 @@
           <div class="label-toggle" aria-label="Photo label">
             <button type="button" data-label="before" class="${photo.label === "before" ? "active" : ""}">Before</button>
             <button type="button" data-label="after" class="${photo.label === "after" ? "active" : ""}">After</button>
-            <button type="button" data-label="none" class="${photo.label !== "before" && photo.label !== "after" ? "active" : ""}">—</button>
+            <button type="button" data-label="none" class="no-label-option ${photo.label !== "before" && photo.label !== "after" ? "active" : ""}" title="No label" aria-label="No Before or After label">-</button>
           </div>
           <div class="card-actions">
             <span class="card-position">Position ${index + 1}</span>
@@ -274,11 +274,11 @@
         items.push(`<div class="preview-placeholder">${i + 1}</div>`);
         continue;
       }
-      const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "—";
+      const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "";
       items.push(`
         <div class="preview-photo">
           <img src="${escapeHtml(publicUrl(photo.storage_path))}" alt="">
-          <span>${label}</span>
+          ${label ? `<span>${label}</span>` : ""}
         </div>
       `);
     }
