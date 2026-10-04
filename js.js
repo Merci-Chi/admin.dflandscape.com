@@ -816,23 +816,30 @@
     const email = emailInput.value.trim();
     const password = $("#password").value;
 
-    const { data, error } = await client.auth.signInWithPassword({ email, password });
-    setBusy(loginButton, false);
+    try {
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
 
-    if (error) {
+      if (error) {
+        loginError.hidden = false;
+        loginError.textContent = error.message || "Could not sign in. Check your email and password.";
+        return;
+      }
+
+      if (saveEmailCheckbox.checked) {
+        window.localStorage.setItem(SAVED_EMAIL_KEY, email);
+      } else {
+        window.localStorage.removeItem(SAVED_EMAIL_KEY);
+      }
+
+      appSessionUserId = data.session?.user?.id || null;
+      await enterApp(data.session);
+    } catch (error) {
+      console.error("Sign in failed:", error);
       loginError.hidden = false;
-      loginError.textContent = "Could not sign in. Check your email and password.";
-      return;
+      loginError.textContent = error?.message || "Could not sign in. Please try again.";
+    } finally {
+      setBusy(loginButton, false);
     }
-
-    if (saveEmailCheckbox.checked) {
-      window.localStorage.setItem(SAVED_EMAIL_KEY, email);
-    } else {
-      window.localStorage.removeItem(SAVED_EMAIL_KEY);
-    }
-
-    appSessionUserId = data.session?.user?.id || null;
-    await enterApp(data.session);
   });
 
   $("#togglePassword").addEventListener("click", () => {
@@ -1031,7 +1038,7 @@
 
   let appSessionUserId = null;
 
-  client.auth.onAuthStateChange(async (event, session) => {
+  client.auth.onAuthStateChange((event, session) => {
     if (event === "SIGNED_OUT") {
       appSessionUserId = null;
       photos = [];
@@ -1039,13 +1046,8 @@
       return;
     }
 
-    if (
-      session?.user &&
-      (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") &&
-      appSessionUserId !== session.user.id
-    ) {
+    if (session?.user) {
       appSessionUserId = session.user.id;
-      await enterApp(session);
     }
   });
 
