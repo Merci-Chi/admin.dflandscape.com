@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#123b2a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Desert Forest Landscape — Photo Admin</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="css.css">
+</head>
+<body>
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <section id="loginView" class="login-shell">
+    <div class="login-card">
+      <div class="login-brand">
+        <img src="https://dflandscape.com/images/logo.png" alt="Desert Forest Landscape logo">
+        <div>
+          <span class="eyebrow">DESERT FOREST LANDSCAPE</span>
+          <h1>Photo Admin</h1>
+        </div>
+      </div>
+
+      <p class="login-copy">Sign in to upload, label, delete, and reorder project photos.</p>
+
+      <form id="loginForm" class="login-form">
+        <label>
+          <span>Email</span>
+          <div class="input-wrap">
+            <i class="fa-regular fa-envelope"></i>
+            <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+        </label>
+
+        <label>
+          <span>Password</span>
+          <div class="input-wrap">
+            <i class="fa-solid fa-lock"></i>
+            <input id="password" type="password" autocomplete="current-password" required placeholder="••••••••">
+            <button id="togglePassword" class="input-icon-button" type="button" aria-label="Show password">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </label>
+
+        <button id="loginButton" class="primary wide" type="submit">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i>
+          Sign in
+        </button>
+        <p id="loginError" class="form-error" hidden></p>
+      </form>
+    </div>
+  </section>
+
+  <div id="appView" class="app" hidden>
+    <aside class="sidebar" id="sidebar">
+      <div class="side-brand">
+        <img src="https://dflandscape.com/images/logo.png" alt="">
+        <div>
+          <strong>Desert Forest</strong>
+          <span>Photo Admin</span>
+        </div>
+      </div>
+
+      <nav class="side-nav">
+        <button class="active" type="button" data-scroll="photosSection">
+          <i class="fa-regular fa-images"></i>
+          Project Photos
+        </button>
+        <button type="button" data-scroll="previewSection">
+          <i class="fa-solid fa-display"></i>
+          Homepage Preview
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <p>Drag photos to set their order. The first 5 show on desktop and the first 6 show on mobile.</p>
+      </div>
+
+      <button id="signOutButton" class="signout" type="button">
+        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        Sign out
+      </button>
+    </aside>
+
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="top-left">
+          <button id="menuButton" class="icon-button mobile-menu" type="button" aria-label="Open menu">
+            <i class="fa-solid fa-bars"></i>
+          </button>
+          <div>
+            <span class="eyebrow">WEBSITE CONTENT</span>
+            <h2>Project Photos</h2>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <span id="signedInEmail" class="signed-in-email"></span>
+          <label class="primary upload-button">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            Upload Photos
+            <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple hidden>
+          </label>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="intro-card">
+          <div>
+            <span class="eyebrow">HOW IT WORKS</span>
+            <h1>One order controls the whole website.</h1>
+            <p>Reorder photos here, choose <strong>Before</strong> or <strong>After</strong>, and the same order can be used by the homepage and full gallery.</p>
+          </div>
+          <div class="rules">
+            <div><strong>1–5</strong><span>Desktop home</span></div>
+            <div><strong>1–6</strong><span>Mobile home</span></div>
+            <div><strong>All</strong><span>Gallery page</span></div>
+          </div>
+        </section>
+
+        <section id="photosSection" class="section-card">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">ALL PROJECT PHOTOS</span>
+              <h2>Photo order</h2>
+              <p>Grab the handle and drag a card to a new position. Changes save automatically.</p>
+            </div>
+            <div class="photo-count"><strong id="photoCount">0</strong><span>photos</span></div>
+          </div>
+
+          <div id="loadingState" class="state-box">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Loading photos…</span>
+          </div>
+
+          <div id="emptyState" class="state-box" hidden>
+            <i class="fa-regular fa-images"></i>
+            <strong>No project photos yet</strong>
+            <span>Use “Upload Photos” to add the first images.</span>
+          </div>
+
+          <div id="photoGrid" class="photo-grid" aria-live="polite"></div>
+        </section>
+
+        <section id="previewSection" class="section-card">
+          <div class="section-head">
+            <div>
+              <span class="eyebrow">HOMEPAGE PREVIEW</span>
+              <h2>What visitors will see first</h2>
+              <p>The gallery page can use every photo; these are the homepage selections.</p>
+            </div>
+          </div>
+
+          <div class="preview-block">
+            <div class="preview-title">
+              <div><i class="fa-solid fa-display"></i><strong>Desktop</strong></div>
+              <span>First 5 photos</span>
+            </div>
+            <div id="desktopPreview" class="desktop-preview"></div>
+          </div>
+
+          <div class="preview-block">
+            <div class="preview-title">
+              <div><i class="fa-solid fa-mobile-screen-button"></i><strong>Mobile</strong></div>
+              <span>First 6 photos</span>
+            </div>
+            <div id="mobilePreview" class="mobile-preview"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+
+
+  <div id="pairModal" class="modal-bg" hidden>
+    <div class="modal pair-modal">
+      <div class="modal-icon pair-modal-icon"><i class="fa-solid fa-link"></i></div>
+      <h2>Pair before & after</h2>
+      <p id="pairModalCopy">Choose the matching photo.</p>
+
+      <div id="pairChoices" class="featured-choices"></div>
+
+      <div class="modal-actions">
+        <button id="cancelPair" class="secondary" type="button">Cancel</button>
+        <button id="savePair" class="primary" type="button" disabled>
+          <i class="fa-solid fa-link"></i>
+          Save Pair
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="featuredModal" class="modal-bg" hidden>
+    <div class="modal featured-modal">
+      <div class="modal-icon featured-modal-icon"><i class="fa-solid fa-star"></i></div>
+      <h2>Switch a homepage photo</h2>
+      <p id="featuredModalCopy">Choose which of the current 6 photos you want to replace.</p>
+
+      <div id="featuredChoices" class="featured-choices"></div>
+
+      <div class="modal-actions">
+        <button id="cancelFeatured" class="secondary" type="button">Cancel</button>
+        <button id="saveFeatured" class="primary" type="button" disabled>
+          <i class="fa-solid fa-check"></i>
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="modal-bg" hidden>
+    <div class="modal">
+      <div class="modal-icon"><i class="fa-regular fa-trash-can"></i></div>
+      <h2>Delete this photo?</h2>
+      <p>This removes it from the project gallery and Supabase Storage.</p>
+      <div class="modal-actions">
+        <button id="cancelDelete" class="secondary" type="button">Cancel</button>
+        <button id="confirmDelete" class="danger" type="button">
+          <i class="fa-regular fa-trash-can"></i>
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <script src="js.js"></script>
+</body>
+</html>
