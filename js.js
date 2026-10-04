@@ -1018,7 +1018,7 @@
 
   function updateScrollTopButton() {
     const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-    const shouldShow = scrollY > 180 && !appShell.hidden;
+    const shouldShow = scrollY > 180 && !appView.hidden;
 
     scrollTopButton.hidden = false;
     scrollTopButton.classList.toggle("show", shouldShow);
