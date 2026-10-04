@@ -6,14 +6,24 @@
   const BUCKET = "dfl-projects";
   const TABLE = "dfl_project_photos";
 
-  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+  const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+      storage: window.localStorage
+    }
+  });
 
   const $ = (selector) => document.querySelector(selector);
+  const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
   const loginView = $("#loginView");
   const appView = $("#appView");
   const loginForm = $("#loginForm");
   const loginButton = $("#loginButton");
   const loginError = $("#loginError");
+  const saveEmailCheckbox = $("#saveEmail");
+  const emailInput = $("#email");
   const fileInput = $("#fileInput");
   const photoGrid = $("#photoGrid");
   const photoCount = $("#photoCount");
@@ -802,7 +812,7 @@
     loginError.hidden = true;
     setBusy(loginButton, true);
 
-    const email = $("#email").value.trim();
+    const email = emailInput.value.trim();
     const password = $("#password").value;
 
     const { data, error } = await client.auth.signInWithPassword({ email, password });
@@ -812,6 +822,12 @@
       loginError.hidden = false;
       loginError.textContent = "Could not sign in. Check your email and password.";
       return;
+    }
+
+    if (saveEmailCheckbox.checked) {
+      window.localStorage.setItem(SAVED_EMAIL_KEY, email);
+    } else {
+      window.localStorage.removeItem(SAVED_EMAIL_KEY);
     }
 
     await enterApp(data.session);
@@ -1016,6 +1032,14 @@
   });
 
   (async function boot() {
+    const savedEmail = window.localStorage.getItem(SAVED_EMAIL_KEY);
+    if (savedEmail) {
+      emailInput.value = savedEmail;
+      saveEmailCheckbox.checked = true;
+    } else {
+      saveEmailCheckbox.checked = false;
+    }
+
     const { data } = await client.auth.getSession();
     if (data.session) await enterApp(data.session);
     else showLogin();
