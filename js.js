@@ -189,11 +189,12 @@
     const paired = photos.find((item) => item.id === photo.paired_photo_id);
     if (!paired) return "Linked photo";
     const pairIndex = photos.findIndex((item) => item.id === paired.id);
-    return `${paired.label === "before" ? "Before" : "After"} • Position ${pairIndex + 1}`;
+    const pairLabel = paired.label === "before" ? "Before" : paired.label === "after" ? "After" : "—";
+    return `${pairLabel} • Position ${pairIndex + 1}`;
   }
 
   function photoCard(photo, index) {
-    const label = photo.label === "before" ? "Before" : "After";
+    const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "—";
     const src = publicUrl(photo.storage_path);
 
     return `
@@ -201,7 +202,7 @@
         <div class="photo-image-wrap">
           <img src="${escapeHtml(src)}" alt="Project photo ${index + 1}" loading="lazy">
           <span class="order-badge">${index + 1}</span>
-          <span class="label-badge">${label}</span>
+          ${photo.label === "before" || photo.label === "after" ? `<span class="label-badge">${label}</span>` : ""}
           <button class="drag-handle" type="button" title="Drag to reorder" aria-label="Drag photo ${index + 1} to reorder">
             <i class="fa-solid fa-grip-vertical"></i>
           </button>
@@ -216,22 +217,35 @@
           </button>
         </div>
         <div class="photo-body">
-          <div class="label-toggle" aria-label="Before or after">
+          <div class="label-toggle" aria-label="Photo label">
             <button type="button" data-label="before" class="${photo.label === "before" ? "active" : ""}">Before</button>
-            <button type="button" data-label="after" class="${photo.label !== "before" ? "active" : ""}">After</button>
+            <button type="button" data-label="after" class="${photo.label === "after" ? "active" : ""}">After</button>
+            <button type="button" data-label="none" class="${photo.label !== "before" && photo.label !== "after" ? "active" : ""}">—</button>
           </div>
           <div class="card-actions">
             <span class="card-position">Position ${index + 1}</span>
             <div style="display:flex;gap:7px;align-items:center">
               <button
-                class="pair-button ${photo.paired_photo_id ? "paired" : ""}"
+                class="pair-button ${photo.paired_photo_id ? "paired" : ""} ${photo.label !== "before" && photo.label !== "after" ? "disabled-pair" : ""}"
                 type="button"
                 data-pair
-                title="${photo.paired_photo_id ? "Change or remove pair" : "Pair before and after"}"
+                title="${photo.label !== "before" && photo.label !== "after" ? "Choose Before or After before pairing" : photo.paired_photo_id ? "Change paired photo" : "Pair before and after"}"
               >
                 <i class="fa-solid fa-link"></i>
-                ${photo.paired_photo_id ? "Paired" : "Pair"}
+                ${photo.paired_photo_id ? "Change Pair" : "Pair"}
               </button>
+              ${photo.paired_photo_id ? `
+                <button
+                  class="unpair-button"
+                  type="button"
+                  data-unpair
+                  title="Unpair these photos"
+                  aria-label="Unpair photo ${index + 1}"
+                >
+                  <i class="fa-solid fa-link-slash"></i>
+                  Unpair
+                </button>
+              ` : ""}
               <button class="delete-button" type="button" data-delete title="Delete photo" aria-label="Delete photo ${index + 1}">
                 <i class="fa-regular fa-trash-can"></i>
               </button>
@@ -260,7 +274,7 @@
         items.push(`<div class="preview-placeholder">${i + 1}</div>`);
         continue;
       }
-      const label = photo.label === "before" ? "Before" : "After";
+      const label = photo.label === "before" ? "Before" : photo.label === "after" ? "After" : "—";
       items.push(`
         <div class="preview-photo">
           <img src="${escapeHtml(publicUrl(photo.storage_path))}" alt="">
@@ -274,6 +288,11 @@
 
 
   function openPairModal(photo) {
+    if (photo.label !== "before" && photo.label !== "after") {
+      toast("Choose Before or After before pairing this photo.", "error");
+      return;
+    }
+
     pendingPairPhoto = photo;
     selectedPairId = photo.paired_photo_id || null;
 
@@ -325,6 +344,33 @@
     selectedPairId = null;
     savePair.disabled = true;
     pairModal.hidden = true;
+  }
+
+
+  function orderPairBeforeAfter(firstId, secondId) {
+    const first = photos.find((item) => item.id === firstId);
+    const second = photos.find((item) => item.id === secondId);
+    if (!first || !second) return;
+
+    if (!["before", "after"].includes(first.label) || !["before", "after"].includes(second.label)) return;
+
+    const before = first.label === "before" ? first : second;
+    const after = before.id === first.id ? second : first;
+
+    const firstIndex = photos.findIndex((item) => item.id === first.id);
+    const secondIndex = photos.findIndex((item) => item.id === second.id);
+    const insertAt = Math.max(0, Math.min(firstIndex, secondIndex));
+
+    const remaining = photos.filter(
+      (item) => item.id !== first.id && item.id !== second.id
+    );
+
+    remaining.splice(insertAt, 0, before, after);
+
+    photos = remaining.map((item, index) => ({
+      ...item,
+      sort_order: index + 1
+    }));
   }
 
   async function unpairPhoto(photo) {
@@ -405,6 +451,39 @@
   }
 
   function wireCards() {
+    photoGrid.querySelectorAll("[data-unpair]").forEach((button) => {
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const card = button.closest(".photo-card");
+        const photo = photos.find((item) => item.id === card.dataset.id);
+        if (!photo?.paired_photo_id) return;
+
+        const partner = photos.find((item) => item.id === photo.paired_photo_id);
+        const confirmed = window.confirm(
+          `Unpair this ${photo.label.toUpperCase()} photo${partner ? ` from its ${partner.label.toUpperCase()} photo` : ""}?`
+        );
+        if (!confirmed) return;
+
+        try {
+          await unpairPhoto(photo);
+
+          const partnerId = photo.paired_photo_id;
+          photo.paired_photo_id = null;
+          if (partnerId) {
+            const localPartner = photos.find((item) => item.id === partnerId);
+            if (localPartner) localPartner.paired_photo_id = null;
+          }
+
+          render();
+          toast("Photos unpaired.");
+        } catch (error) {
+          console.error(error);
+          toast("Could not unpair the photos.", "error");
+        }
+      });
+    });
+
     photoGrid.querySelectorAll(".photo-card").forEach((card) => {
       card.addEventListener("click", (event) => {
         if (
@@ -425,13 +504,6 @@
         const card = button.closest(".photo-card");
         const photo = photos.find((item) => item.id === card.dataset.id);
         if (!photo) return;
-
-        if (photo.paired_photo_id) {
-          const change = window.confirm(
-            "This photo is already paired. Click OK to change the pair, or Cancel to keep it."
-          );
-          if (!change) return;
-        }
 
         openPairModal(photo);
       });
@@ -454,6 +526,21 @@
         if (!photo || photo.label === label) return;
 
         const oldLabel = photo.label;
+
+        if (label === "none" && photo.paired_photo_id) {
+          try {
+            const partnerId = photo.paired_photo_id;
+            await unpairPhoto(photo);
+            photo.paired_photo_id = null;
+            const partner = photos.find((item) => item.id === partnerId);
+            if (partner) partner.paired_photo_id = null;
+          } catch (unpairError) {
+            console.error(unpairError);
+            toast("Could not remove the existing pair.", "error");
+            return;
+          }
+        }
+
         photo.label = label;
         render();
 
@@ -465,7 +552,18 @@
           toast("Could not save the label.", "error");
           return;
         }
-        toast(`Marked as ${label}.`);
+
+        if (photo.paired_photo_id) {
+          orderPairBeforeAfter(photo.id, photo.paired_photo_id);
+          try {
+            await persistPhotoOrder(photos);
+          } catch (orderError) {
+            console.error(orderError);
+          }
+          render();
+        }
+
+        toast(label === "none" ? "Photo label removed." : `Marked as ${label}.`);
       });
     });
 
@@ -673,7 +771,7 @@
           .from(TABLE)
           .insert({
             storage_path: storagePath,
-            label: "after",
+            label: "none",
             sort_order: nextOrder
           });
 
@@ -776,9 +874,15 @@
         .eq("id", other.id);
       if (secondError) throw secondError;
 
+      // Update local pair state, then force BEFORE first and AFTER second.
+      photo.paired_photo_id = other.id;
+      other.paired_photo_id = photo.id;
+      orderPairBeforeAfter(photo.id, other.id);
+      await persistPhotoOrder(photos);
+
       closePairModal();
-      await loadPhotos();
-      toast("Before and After photos paired.");
+      render();
+      toast("Paired — Before is first, After is second.");
     } catch (error) {
       console.error(error);
       toast("Could not save the pair.", "error");
