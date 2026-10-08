@@ -2226,10 +2226,12 @@
 
   const num = value => Number(value || 0).toLocaleString("en-US");
   function statsDateKey(value) {
-    return new Intl.DateTimeFormat("en-CA", {
+    const parts = new Intl.DateTimeFormat("en-US", {
       timeZone: "America/Los_Angeles",
       year: "numeric", month: "2-digit", day: "2-digit"
-    }).format(value);
+    }).formatToParts(value);
+    const get = type => parts.find(part => part.type === type)?.value || "";
+    return get("year") + "-" + get("month") + "-" + get("day");
   }
   function renderStatsRows(container, rows, empty = "No events recorded yet") {
     container.replaceChildren();
@@ -2319,7 +2321,7 @@
       csvCells(["Visitors",current.visitors,previous.visitors,changeLabel(current.visitors,previous.visitors)]),
       csvCells(["Contact actions",current.contacts,previous.contacts,changeLabel(current.contacts,previous.contacts)]),
       csvCells(["Action rate",current.rate.toFixed(1)+"%",previous.rate.toFixed(1)+"%",$("#weeklyRateChange").textContent]),
-    ].join("\\r\\n");
+    ].join("\r\n");
     $("#statsExportCsv").disabled = false;
   }
   $("#statsExportCsv")?.addEventListener("click", () => {
