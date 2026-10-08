@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261008-1">
+  <link rel="stylesheet" href="css.css?v=20261008-2">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -168,10 +168,30 @@
           <span class="eyebrow">WEBSITE ANALYTICS</span>
           <h1>Website Stats</h1>
           <p>Monitor visitors and interactions on dflandscape.com.</p>
-          <div class="stats-empty" role="status">
-            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
-            <strong>Analytics tracking is not connected yet</strong>
-            <span>Visitor counts and button-click reports will appear here after tracking is configured in the next batches.</span>
+          <div class="stats-toolbar">
+            <label for="statsRange">Time period</label>
+            <select id="statsRange" aria-label="Analytics time period">
+              <option value="1">Today</option>
+              <option value="7" selected>Last 7 days</option>
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+            <button class="secondary" id="refreshStats" type="button"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+          </div>
+          <p class="stats-status" id="statsStatus" role="status">Open this page to load analytics.</p>
+          <div id="statsResults" hidden>
+            <div class="stats-metrics">
+              <article><span>Total page views</span><strong id="statPageViews">—</strong></article>
+              <article><span>Unique visitors (estimated)</span><strong id="statVisitors">—</strong></article>
+              <article><span>Button clicks</span><strong id="statClicks">—</strong></article>
+              <article><span>Contact actions</span><strong id="statContacts">—</strong></article>
+            </div>
+            <div class="stats-panels">
+              <section class="stats-panel"><h3>Visits by day</h3><div id="statsVisitChart" class="stats-bars"></div></section>
+              <section class="stats-panel"><h3>Most clicked actions</h3><div id="statsClickChart" class="stats-actions"></div></section>
+              <section class="stats-panel"><h3>Popular pages</h3><div id="statsPages"></div></section>
+              <section class="stats-panel"><h3>Device types</h3><div id="statsDevices"></div></section>
+            </div>
           </div>
         </section>
       </div>
@@ -233,7 +253,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-1"></script>
+  <script src="js.js?v=20261008-2"></script>
 
   <button id="scrollTopButton" class="scroll-top-button" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fa-solid fa-arrow-up"></i>
