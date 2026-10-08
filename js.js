@@ -2399,7 +2399,7 @@
       const byDay = counts(views, e => statsDateKey(new Date(e.created_at))).sort((a,b) => a.name.localeCompare(b.name));
       renderStatsRows($("#statsVisitChart"), byDay);
       renderStatsRows($("#statsClickChart"), counts(clicks, e => e.event_name).slice(0, 12));
-      renderStatsRows($("#statsPages"), counts(views, e => e.page_path).slice(0, 10));
+      renderStatsRows($("#statsPages"), counts(views, e => e.page_path === "/" || e.page_path === "/index.html" ? "Homepage" : e.page_path).slice(0, 10));
       // Device shares are based on page views within the selected period.
       const deviceRows = ["mobile", "desktop", "tablet", "unknown"].map(type => ({
         name: type.charAt(0).toUpperCase() + type.slice(1),
