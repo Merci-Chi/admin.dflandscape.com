@@ -273,6 +273,34 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
   <script src="js.js?v=20261008-5"></script>
+  <script>
+    // Keep the installed admin web app current without reinstalling it.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', async () => {
+        try {
+          const registration = await navigator.serviceWorker.register('/service-worker.js', { updateViaCache: 'none' });
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            refreshing = true;
+            window.location.reload();
+          });
+          const checkForUpdates = () => {
+            if (navigator.onLine) registration.update().catch(() => {});
+          };
+          document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) checkForUpdates();
+          });
+          window.addEventListener('pageshow', checkForUpdates);
+          window.addEventListener('online', checkForUpdates);
+          setInterval(checkForUpdates, 60 * 60 * 1000);
+          checkForUpdates();
+        } catch (error) {
+          console.warn('Admin app update registration unavailable', error);
+        }
+      });
+    }
+  </script>
 
   <button id="scrollTopButton" class="scroll-top-button" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fa-solid fa-arrow-up"></i>
