@@ -151,7 +151,7 @@ img{display:block;max-width:100%}
   .photo-grid{gap:9px}
   .photo-body{padding:9px}
   .section-head h2{font-size:19px}
-  .desktop-preview{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+
 }
 
 
