@@ -2285,7 +2285,7 @@
       // Fetch all event pages, avoiding Supabase's default 1000-row cap.
       for (let offset = 0; offset < 50000; offset += pageSize) {
         const { data, error } = await client.from("dfl_analytics_events")
-          .select("created_at,event_type,event_name,visitor_id,page_path,device_type")
+          .select("created_at,event_type,event_name,visitor_id,session_id,page_path,device_type,referrer_host")
           .gte("created_at", since.toISOString())
           .order("created_at", { ascending: true })
           .range(offset, offset + pageSize - 1);
@@ -2303,6 +2303,9 @@
       $("#statVisitors").textContent = num(new Set(views.map(e => e.visitor_id)).size);
       $("#statClicks").textContent = num(clicks.length);
       $("#statContacts").textContent = num(contactClicks.length + successfulForms.length);
+      $("#statSessions").textContent = num(new Set(events.map(e => e.session_id)).size);
+      const recentCutoff = Date.now() - 5 * 60 * 1000;
+      $("#statActive").textContent = num(new Set(events.filter(e => new Date(e.created_at).getTime() >= recentCutoff).map(e => e.visitor_id)).size);
       const counts = (items, key) => {
         const map = new Map();
         for (const item of items) {
@@ -2317,6 +2320,7 @@
       renderStatsRows($("#statsClickChart"), counts(clicks, e => e.event_name).slice(0, 12));
       renderStatsRows($("#statsPages"), counts(views, e => e.page_path).slice(0, 10));
       renderStatsRows($("#statsDevices"), counts(views, e => e.device_type));
+      renderStatsRows($("#statsSources"), counts(views, e => e.referrer_host || "Direct / unknown").slice(0, 12));
       statsResults.hidden = false;
       statsStatus.textContent = events.length
         ? "Based on " + num(events.length) + " tracked events since " + since.toLocaleDateString("en-US") + "."
