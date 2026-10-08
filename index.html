@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261004-5">
+  <link rel="stylesheet" href="css.css?v=20261008-1">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -82,9 +82,9 @@
           <i class="fa-regular fa-images"></i>
           Project Photos
         </button>
-        <button type="button" data-scroll="previewSection">
-          <i class="fa-solid fa-display"></i>
-          Homepage Preview
+        <button type="button" data-view="stats">
+          <i class="fa-solid fa-chart-line"></i>
+          Website Stats
         </button>
       </nav>
 
@@ -108,14 +108,14 @@
             <i class="fa-solid fa-bars"></i>
           </button>
           <div>
-            <span class="eyebrow">WEBSITE CONTENT</span>
-            <h2>Project Photos</h2>
+            <span class="eyebrow" id="pageEyebrow">WEBSITE CONTENT</span>
+            <h2 id="pageTitle">Project Photos</h2>
           </div>
         </div>
 
         <div class="top-actions">
           <span id="signedInEmail" class="signed-in-email"></span>
-          <label class="primary upload-button">
+          <label class="primary upload-button" id="uploadPhotosAction">
             <i class="fa-solid fa-cloud-arrow-up"></i>
             Upload Photos
             <input id="fileInput" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple hidden>
@@ -123,7 +123,7 @@
         </div>
       </header>
 
-      <div class="content">
+      <div class="content" id="photosView">
         <section class="intro-card">
           <div>
             <span class="eyebrow">HOW IT WORKS</span>
@@ -161,29 +161,17 @@
           <div id="photoGrid" class="photo-grid" aria-live="polite"></div>
         </section>
 
-        <section id="previewSection" class="section-card">
-          <div class="section-head">
-            <div>
-              <span class="eyebrow">HOMEPAGE PREVIEW</span>
-              <h2>What visitors will see first</h2>
-              <p>The gallery page can use every photo; these are the homepage selections.</p>
-            </div>
-          </div>
 
-          <div class="preview-block">
-            <div class="preview-title">
-              <div><i class="fa-solid fa-display"></i><strong>Desktop</strong></div>
-              <span>First 5 photos</span>
-            </div>
-            <div id="desktopPreview" class="desktop-preview"></div>
-          </div>
-
-          <div class="preview-block">
-            <div class="preview-title">
-              <div><i class="fa-solid fa-mobile-screen-button"></i><strong>Mobile</strong></div>
-              <span>First 6 photos</span>
-            </div>
-            <div id="mobilePreview" class="mobile-preview"></div>
+      </div>
+      <div class="content stats-view" id="statsView" hidden>
+        <section class="section-card stats-intro">
+          <span class="eyebrow">WEBSITE ANALYTICS</span>
+          <h1>Website Stats</h1>
+          <p>Monitor visitors and interactions on dflandscape.com.</p>
+          <div class="stats-empty" role="status">
+            <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+            <strong>Analytics tracking is not connected yet</strong>
+            <span>Visitor counts and button-click reports will appear here after tracking is configured in the next batches.</span>
           </div>
         </section>
       </div>
@@ -245,7 +233,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261004-8"></script>
+  <script src="js.js?v=20261008-1"></script>
 
   <button id="scrollTopButton" class="scroll-top-button" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fa-solid fa-arrow-up"></i>
