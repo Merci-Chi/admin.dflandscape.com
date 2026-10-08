@@ -1319,3 +1319,17 @@ button,
 @media(max-width:640px){.stats-panels{grid-template-columns:1fr}.stats-metrics article{padding:15px}.stats-toolbar{gap:8px}.stats-panel{padding:16px}}
 
 .stats-metrics article small{color:var(--muted);font-size:10px;line-height:1.45}
+
+/* Requested batches 7 + 13: devices and weekly comparison only */
+.stats-weekly{border:1px solid var(--line);background:#fff;border-radius:16px;padding:20px;margin:0 0 20px}
+.stats-weekly-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.stats-weekly-head h3{font-size:17px;margin:0 0 5px;color:var(--forest)}
+.stats-weekly-head p,.stats-weekly-footnote{color:var(--muted);font-size:12px;line-height:1.5;margin:0}
+.stats-weekly-head button{min-height:38px}
+.stats-weekly-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.stats-weekly-grid article{padding:16px;border:1px solid var(--line);border-radius:12px;background:#f8faf7;display:flex;flex-direction:column;gap:7px}
+.stats-weekly-grid article span{font-size:12px;color:var(--muted);font-weight:800}
+.stats-weekly-grid article strong{font-size:clamp(22px,2.5vw,32px);color:var(--forest)}
+.stats-weekly-grid article small{font-size:12px;color:#2a744d;font-weight:700}
+.stats-weekly-footnote{margin-top:13px}
+@media(max-width:640px){.stats-weekly-grid{grid-template-columns:1fr}.stats-weekly{padding:15px}}
