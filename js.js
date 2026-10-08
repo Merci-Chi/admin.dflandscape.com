@@ -2266,9 +2266,14 @@
 
   const reportTz = "America/Los_Angeles";
   let weeklyCsv = "";
+  // Count meaningful contact intent, not ordinary navigation to #contact.
   const contactEvent = event => (
     event.event_type === "form_submit" ||
-    (event.event_type === "click" && /call_now|contact|estimate|email_click/i.test(event.event_name))
+    (event.event_type === "click" &&
+      (event.event_name === "call_now" ||
+       event.event_name === "email_click" ||
+       event.event_name === "contact_submit_click" ||
+       /(?:^|_)estimate(?:_|$)/i.test(event.event_name)))
   );
   // Work with Las Vegas calendar-day keys to avoid browser timezone differences.
   function shiftDay(dayKey, offset) {
@@ -2378,12 +2383,11 @@
       const inRange = events.filter(e => new Date(e.created_at) >= since);
       const views = inRange.filter(e => e.event_type === "page_view");
       const clicks = inRange.filter(e => e.event_type === "click");
-      const contactClicks = clicks.filter(e => /call_now|contact|estimate|email_click/i.test(e.event_name));
-      const successfulForms = inRange.filter(e => e.event_type === "form_submit");
+      const contactActions = inRange.filter(contactEvent);
       $("#statPageViews").textContent = num(views.length);
       $("#statVisitors").textContent = num(new Set(views.map(e => e.visitor_id)).size);
       $("#statClicks").textContent = num(clicks.length);
-      $("#statContacts").textContent = num(contactClicks.length + successfulForms.length);
+      $("#statContacts").textContent = num(contactActions.length);
       $("#statSessions").textContent = num(new Set(inRange.map(e => e.session_id)).size);
       const recentCutoff = Date.now() - 5 * 60 * 1000;
       $("#statActive").textContent = num(new Set(inRange.filter(e => new Date(e.created_at).getTime() >= recentCutoff).map(e => e.visitor_id)).size);
