@@ -2262,10 +2262,85 @@
     });
   }
 
+  const reportTz = "America/Los_Angeles";
+  let weeklyCsv = "";
+  const contactEvent = event => (
+    event.event_type === "form_submit" ||
+    (event.event_type === "click" && /call_now|contact|estimate|email_click/i.test(event.event_name))
+  );
+  // Work with Las Vegas calendar-day keys to avoid browser timezone differences.
+  function shiftDay(dayKey, offset) {
+    const [y, m, d] = dayKey.split("-").map(Number);
+    return new Date(Date.UTC(y, m - 1, d + offset)).toISOString().slice(0, 10);
+  }
+  function mondayOf(dayKey) {
+    const [y, m, d] = dayKey.split("-").map(Number);
+    const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+    return shiftDay(dayKey, -((weekday + 6) % 7));
+  }
+  function comparisonStats(rows) {
+    const pages = rows.filter(e => e.event_type === "page_view");
+    const visitors = new Set(pages.map(e => e.visitor_id));
+    const contacted = new Set(rows.filter(contactEvent).map(e => e.visitor_id)
+      .filter(id => visitors.has(id)));
+    return {
+      visitors: visitors.size,
+      contacts: rows.filter(contactEvent).length,
+      rate: visitors.size ? contacted.size / visitors.size * 100 : 0
+    };
+  }
+  function changeLabel(current, previous, rate = false) {
+    if (!previous) return current ? "New (no prior baseline)" : "No prior data";
+    const difference = (current - previous) / previous * 100;
+    return (difference > 0 ? "+" : "") + difference.toFixed(1) + "%" + (rate ? " vs last week" : " vs last week");
+  }
+  function renderWeeklyReport(rows, todayKey) {
+    const weekStart = mondayOf(todayKey);
+    const elapsed = Math.round((Date.parse(todayKey + "T00:00:00Z") - Date.parse(weekStart + "T00:00:00Z")) / 86400000);
+    const lastWeekStart = shiftDay(weekStart, -7);
+    const lastWeekEnd = shiftDay(lastWeekStart, elapsed);
+    const current = comparisonStats(rows.filter(e => {
+      const k = statsDateKey(new Date(e.created_at));
+      return k >= weekStart && k <= todayKey;
+    }));
+    const previous = comparisonStats(rows.filter(e => {
+      const k = statsDateKey(new Date(e.created_at));
+      return k >= lastWeekStart && k <= lastWeekEnd;
+    }));
+    $("#weeklyVisitors").textContent = num(current.visitors);
+    $("#weeklyContacts").textContent = num(current.contacts);
+    $("#weeklyRate").textContent = current.rate.toFixed(1) + "%";
+    $("#weeklyVisitorsChange").textContent = changeLabel(current.visitors, previous.visitors);
+    $("#weeklyContactsChange").textContent = changeLabel(current.contacts, previous.contacts);
+    $("#weeklyRateChange").textContent = previous.visitors ? (current.rate - previous.rate >= 0 ? "+" : "") + (current.rate - previous.rate).toFixed(1) + " percentage points" : "No prior data";
+    const csvCells = values => values.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(",");
+    weeklyCsv = [
+      csvCells(["Metric","This week to date","Same days last week","Change"]),
+      csvCells(["Visitors",current.visitors,previous.visitors,changeLabel(current.visitors,previous.visitors)]),
+      csvCells(["Contact actions",current.contacts,previous.contacts,changeLabel(current.contacts,previous.contacts)]),
+      csvCells(["Action rate",current.rate.toFixed(1)+"%",previous.rate.toFixed(1)+"%",$("#weeklyRateChange").textContent]),
+    ].join("\\r\\n");
+    $("#statsExportCsv").disabled = false;
+  }
+  $("#statsExportCsv")?.addEventListener("click", () => {
+    if (!weeklyCsv) return;
+    const blob = new Blob([weeklyCsv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "dfl-website-weekly-report-" + statsDateKey(new Date()) + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+
   async function loadWebsiteStats() {
     const request = ++statsRequest;
     statsStatus.textContent = "Loading real website statistics…";
     statsResults.hidden = true;
+    weeklyCsv = "";
+    $("#statsExportCsv").disabled = true;
     const days = Number(statsRange.value);
     const now = new Date();
     const today = statsDateKey(now);
@@ -2279,6 +2354,8 @@
     const timeSinceMidnight = ((part("hour") % 24) * 3600 + part("minute") * 60 + part("second")) * 1000;
     todayStart.setTime(now.getTime() - timeSinceMidnight);
     const since = new Date(todayStart.getTime() - (days - 1) * 86400000);
+    const weeklyStart = new Date(todayStart.getTime() - 13 * 86400000);
+    const fetchStart = weeklyStart < since ? weeklyStart : since;
     try {
       const events = [];
       const pageSize = 1000;
@@ -2286,7 +2363,7 @@
       for (let offset = 0; offset < 50000; offset += pageSize) {
         const { data, error } = await client.from("dfl_analytics_events")
           .select("created_at,event_type,event_name,visitor_id,session_id,page_path,device_type,referrer_host")
-          .gte("created_at", since.toISOString())
+          .gte("created_at", fetchStart.toISOString())
           .order("created_at", { ascending: true })
           .range(offset, offset + pageSize - 1);
         if (error) throw error;
@@ -2295,17 +2372,19 @@
         if (!data || data.length < pageSize) break;
         if (offset + pageSize >= 50000) throw new Error("Too many events for this report. Server-side aggregation is needed.");
       }
-      const views = events.filter(e => e.event_type === "page_view");
-      const clicks = events.filter(e => e.event_type === "click");
+      renderWeeklyReport(events, today);
+      const inRange = events.filter(e => new Date(e.created_at) >= since);
+      const views = inRange.filter(e => e.event_type === "page_view");
+      const clicks = inRange.filter(e => e.event_type === "click");
       const contactClicks = clicks.filter(e => /call_now|contact|estimate|email_click/i.test(e.event_name));
-      const successfulForms = events.filter(e => e.event_type === "form_submit");
+      const successfulForms = inRange.filter(e => e.event_type === "form_submit");
       $("#statPageViews").textContent = num(views.length);
       $("#statVisitors").textContent = num(new Set(views.map(e => e.visitor_id)).size);
       $("#statClicks").textContent = num(clicks.length);
       $("#statContacts").textContent = num(contactClicks.length + successfulForms.length);
-      $("#statSessions").textContent = num(new Set(events.map(e => e.session_id)).size);
+      $("#statSessions").textContent = num(new Set(inRange.map(e => e.session_id)).size);
       const recentCutoff = Date.now() - 5 * 60 * 1000;
-      $("#statActive").textContent = num(new Set(events.filter(e => new Date(e.created_at).getTime() >= recentCutoff).map(e => e.visitor_id)).size);
+      $("#statActive").textContent = num(new Set(inRange.filter(e => new Date(e.created_at).getTime() >= recentCutoff).map(e => e.visitor_id)).size);
       const counts = (items, key) => {
         const map = new Map();
         for (const item of items) {
@@ -2319,11 +2398,17 @@
       renderStatsRows($("#statsVisitChart"), byDay);
       renderStatsRows($("#statsClickChart"), counts(clicks, e => e.event_name).slice(0, 12));
       renderStatsRows($("#statsPages"), counts(views, e => e.page_path).slice(0, 10));
-      renderStatsRows($("#statsDevices"), counts(views, e => e.device_type));
+      // Device shares are based on page views within the selected period.
+      const deviceRows = ["mobile", "desktop", "tablet", "unknown"].map(type => ({
+        name: type.charAt(0).toUpperCase() + type.slice(1),
+        count: views.filter(e => e.device_type === type).length
+      }));
+      renderStatsRows($("#statsDevices"), deviceRows.filter(r => r.count || r.name !== "Unknown")
+        .map(r => ({ ...r, name: r.name + " — " + (views.length ? (100 * r.count / views.length).toFixed(1) : "0.0") + "%" })));
       renderStatsRows($("#statsSources"), counts(views, e => e.referrer_host || "Direct / unknown").slice(0, 12));
       statsResults.hidden = false;
-      statsStatus.textContent = events.length
-        ? "Based on " + num(events.length) + " tracked events since " + since.toLocaleDateString("en-US") + "."
+      statsStatus.textContent = inRange.length
+        ? "Based on " + num(inRange.length) + " tracked events since " + since.toLocaleDateString("en-US") + "."
         : "No tracked events found for this period yet.";
     } catch (error) {
       if (request !== statsRequest) return;
