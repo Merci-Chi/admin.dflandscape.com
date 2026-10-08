@@ -1,5 +1,5 @@
 // Update this version whenever the admin app shell changes.
-const CACHE_NAME = 'dfl-admin-pwa-20261008-1';
+const CACHE_NAME = 'dfl-admin-pwa-20261008-2';
 const SHELL = [
   '/',
   '/index.html',
@@ -39,7 +39,7 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
   // Always prefer the latest HTML, JavaScript and CSS. Cached shell is an offline fallback.
   if (request.mode === 'navigate' || request.destination === 'document' ||
-      /\\.(?:js|css|json|png|ico|svg|webp)$/.test(url.pathname)) {
+      /\.(?:js|css|json|png|ico|svg|webp)$/.test(url.pathname)) {
     event.respondWith((async () => {
       try {
         const response = await fetch(new Request(request, { cache: 'no-store' }));

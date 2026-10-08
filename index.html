@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261008-5">
+  <link rel="stylesheet" href="css.css?v=20261008-6">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -68,7 +68,25 @@
           <i class="fa-solid fa-arrow-right-to-bracket"></i>
           Sign in
         </button>
-        <p id="loginError" class="form-error" hidden></p>
+        <button id="forgotPasswordButton" class="secondary wide" type="button">Forgot password?</button>
+        <button id="emailLinkButton" class="secondary wide" type="button">Email me a one-time login link</button>
+        <p id="loginStatus" class="form-status" role="status" hidden></p>
+        <p id="loginError" class="form-error" role="alert" hidden></p>
+      </form>
+
+      <form id="resetPasswordForm" class="login-form" hidden>
+        <p class="login-copy">Choose a new password for your admin account.</p>
+        <label><span>New password</span><div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input id="newPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
+        </div></label>
+        <label><span>Confirm new password</span><div class="input-wrap">
+          <i class="fa-solid fa-lock"></i>
+          <input id="confirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Re-enter your new password">
+        </div></label>
+        <button id="resetPasswordButton" class="primary wide" type="submit">Save new password</button>
+        <button id="cancelResetButton" class="secondary wide" type="button">Back to sign in</button>
+        <p id="resetPasswordError" class="form-error" role="alert" hidden></p>
       </form>
     </div>
   </section>
@@ -272,7 +290,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-5"></script>
+  <script src="js.js?v=20261008-6"></script>
   <script>
     // Keep the installed admin web app current without reinstalling it.
     if ('serviceWorker' in navigator) {

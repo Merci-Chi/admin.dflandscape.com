@@ -1333,3 +1333,6 @@ button,
 .stats-weekly-grid article small{font-size:12px;color:#2a744d;font-weight:700}
 .stats-weekly-footnote{margin-top:13px}
 @media(max-width:640px){.stats-weekly-grid{grid-template-columns:1fr}.stats-weekly{padding:15px}}
+
+.form-status{margin:0;color:var(--forest);font-size:13px;font-weight:700;line-height:1.5}
+.login-form .secondary:disabled{opacity:.55;cursor:not-allowed}

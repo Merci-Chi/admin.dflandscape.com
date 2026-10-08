@@ -6,6 +6,11 @@
   const BUCKET = "dfl-projects";
   const TABLE = "dfl_project_photos";
 
+  // Capture recovery intent before Supabase consumes the URL tokens.
+  let recoveringPassword = new URLSearchParams(window.location.search).get("auth") === "recovery" ||
+    new URLSearchParams(window.location.hash.slice(1)).get("type") === "recovery";
+  const callbackError = new URLSearchParams(window.location.hash.slice(1)).get("error_description");
+
   const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
       persistSession: true,
@@ -26,6 +31,13 @@
   const loginError = $("#loginError");
   const saveEmailCheckbox = $("#saveEmail");
   const emailInput = $("#email");
+
+  const forgotPasswordButton = $("#forgotPasswordButton");
+  const emailLinkButton = $("#emailLinkButton");
+  const loginStatus = $("#loginStatus");
+  const resetPasswordForm = $("#resetPasswordForm");
+  const resetPasswordError = $("#resetPasswordError");
+  let emailRequestBusy = false;
 
   const fileInput = $("#fileInput");
   const photoGrid = $("#photoGrid");
@@ -113,6 +125,11 @@
   async function enterApp(session) {
     const user = session?.user;
 
+    if (recoveringPassword && user) {
+      showPasswordReset();
+      return;
+    }
+
     if (!user) {
       showLogin();
       return;
@@ -164,6 +181,103 @@
       loginError.textContent = "";
     }
   }
+
+  function showPasswordReset() {
+    appView.hidden = true;
+    loginView.hidden = false;
+    loginForm.hidden = true;
+    resetPasswordForm.hidden = false;
+  }
+
+  function authRedirect(recovery = false) {
+    const url = new URL(window.location.pathname, window.location.origin);
+    if (recovery) url.searchParams.set("auth", "recovery");
+    return url.href;
+  }
+
+  async function sendAuthEmail(recovery) {
+    if (emailRequestBusy) return;
+    emailInput.value = emailInput.value.trim();
+    if (!emailInput.reportValidity()) return;
+    const button = recovery ? forgotPasswordButton : emailLinkButton;
+    loginError.hidden = true;
+    loginStatus.hidden = true;
+    emailRequestBusy = true;
+    setBusy(button, true);
+    forgotPasswordButton.disabled = true;
+    emailLinkButton.disabled = true;
+    loginButton.disabled = true;
+    try {
+      const email = emailInput.value;
+      const { error } = recovery
+        ? await client.auth.resetPasswordForEmail(email, { redirectTo: authRedirect(true) })
+        : await client.auth.signInWithOtp({ email, options: {
+            shouldCreateUser: false,
+            emailRedirectTo: authRedirect()
+          } });
+      if (error) throw error;
+      if (saveEmailCheckbox.checked) window.localStorage.setItem(SAVED_EMAIL_KEY, email);
+      else window.localStorage.removeItem(SAVED_EMAIL_KEY);
+      loginStatus.textContent = recovery
+        ? "If this email has an account, a password reset link has been sent. Check your inbox and spam folder."
+        : "Check your inbox and spam folder for your one-time login link.";
+      loginStatus.hidden = false;
+    } catch (error) {
+      loginError.textContent = error?.message || "Could not send the email. Please try again.";
+      loginError.hidden = false;
+    } finally {
+      emailRequestBusy = false;
+      setBusy(button, false);
+      forgotPasswordButton.disabled = false;
+      emailLinkButton.disabled = false;
+      loginButton.disabled = false;
+    }
+  }
+
+  forgotPasswordButton.addEventListener("click", () => sendAuthEmail(true));
+  emailLinkButton.addEventListener("click", () => sendAuthEmail(false));
+
+  resetPasswordForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const password = $("#newPassword").value;
+    resetPasswordError.hidden = true;
+    if (password.length < 8 || password !== $("#confirmPassword").value) {
+      resetPasswordError.textContent = password.length < 8
+        ? "Use at least 8 characters." : "The passwords do not match.";
+      resetPasswordError.hidden = false;
+      return;
+    }
+    const button = $("#resetPasswordButton");
+    setBusy(button, true);
+    try {
+      const { error } = await client.auth.updateUser({ password });
+      if (error) throw error;
+      recoveringPassword = false;
+      window.history.replaceState({}, "", window.location.pathname);
+      resetPasswordForm.reset();
+      resetPasswordForm.hidden = true;
+      loginForm.hidden = false;
+      const { data, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      await enterApp(data.session);
+      toast("Password updated.");
+    } catch (error) {
+      resetPasswordError.textContent = error?.message || "Could not update your password. Request a new reset link.";
+      resetPasswordError.hidden = false;
+    } finally {
+      setBusy(button, false);
+    }
+  });
+
+  $("#cancelResetButton").addEventListener("click", async () => {
+    recoveringPassword = false;
+    window.history.replaceState({}, "", window.location.pathname);
+    resetPasswordForm.reset();
+    resetPasswordForm.hidden = true;
+    loginForm.hidden = false;
+    await client.auth.signOut();
+    showLogin();
+  });
 
   async function loadPhotos() {
     loadingState.hidden = false;
@@ -1675,6 +1789,8 @@
     "submit",
     async (event) => {
       event.preventDefault();
+      if (emailRequestBusy) return;
+      loginStatus.hidden = true;
 
       loginError.hidden =
         true;
@@ -2552,6 +2668,15 @@
 
   client.auth.onAuthStateChange(
     (event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        recoveringPassword = true;
+        showPasswordReset();
+        return;
+      }
+      // Defer database/auth calls until the Supabase auth callback releases its lock.
+      if (event === "SIGNED_IN" && session && !recoveringPassword && appView.hidden) {
+        setTimeout(() => enterApp(session), 0);
+      }
       if (
         event === "SIGNED_OUT"
       ) {
@@ -2601,6 +2726,13 @@
         throw error;
       }
 
+      if (callbackError) {
+        recoveringPassword = false;
+        window.history.replaceState({}, "", window.location.pathname);
+        showLogin(callbackError);
+        return;
+      }
+
       if (
         data.session?.user
       ) {
@@ -2614,7 +2746,13 @@
         return;
       }
 
-      showLogin();
+      if (recoveringPassword || callbackError) {
+        recoveringPassword = false;
+        window.history.replaceState({}, "", window.location.pathname);
+        showLogin(callbackError || "This password reset link is invalid or expired. Request a new link.");
+      } else {
+        showLogin();
+      }
     } catch (error) {
       console.error(
         "Could not restore saved login session:",
