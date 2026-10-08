@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261008-3">
+  <link rel="stylesheet" href="css.css?v=20261008-4">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -188,11 +188,23 @@
               <article><span>Recently active visitors</span><strong id="statActive">—</strong><small>Activity in the past 5 minutes</small></article>
               <article><span>Sessions</span><strong id="statSessions">—</strong></article>
             </div>
+            <section class="stats-weekly">
+              <div class="stats-weekly-head">
+                <div><h3>Weekly report</h3><p>This week to date versus the same days last week, Las Vegas time.</p></div>
+                <button class="secondary" id="statsExportCsv" type="button" disabled><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+              </div>
+              <div class="stats-weekly-grid">
+                <article><span>Visitors</span><strong id="weeklyVisitors">—</strong><small id="weeklyVisitorsChange">—</small></article>
+                <article><span>Contact actions</span><strong id="weeklyContacts">—</strong><small id="weeklyContactsChange">—</small></article>
+                <article><span>Action rate</span><strong id="weeklyRate">—</strong><small id="weeklyRateChange">—</small></article>
+              </div>
+              <p class="stats-weekly-footnote">Action rate = visitors who took at least one contact action ÷ unique visitors. Contact actions are clicks, not confirmed leads.</p>
+            </section>
             <div class="stats-panels">
               <section class="stats-panel"><h3>Visits by day</h3><div id="statsVisitChart" class="stats-bars"></div></section>
               <section class="stats-panel"><h3>Most clicked actions</h3><div id="statsClickChart" class="stats-actions"></div></section>
               <section class="stats-panel"><h3>Popular pages</h3><div id="statsPages"></div></section>
-              <section class="stats-panel"><h3>Device types</h3><div id="statsDevices"></div></section>
+              <section class="stats-panel"><h3>Devices — visits and percentages</h3><div id="statsDevices"></div></section>
               <section class="stats-panel"><h3>Traffic sources</h3><div id="statsSources"></div></section>
               <section class="stats-panel"><h3>Visitor locations</h3><p class="stats-no-data">Location tracking is not configured. No location data is being collected.</p></section>
             </div>
@@ -257,7 +269,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-3"></script>
+  <script src="js.js?v=20261008-4"></script>
 
   <button id="scrollTopButton" class="scroll-top-button" type="button" aria-label="Scroll to top" title="Back to top">
     <i class="fa-solid fa-arrow-up"></i>
