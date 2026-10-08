@@ -32,8 +32,6 @@
   const photoCount = $("#photoCount");
   const loadingState = $("#loadingState");
   const emptyState = $("#emptyState");
-  const desktopPreview = $("#desktopPreview");
-  const mobilePreview = $("#mobilePreview");
   const signedInEmail = $("#signedInEmail");
 
   const deleteModal = $("#deleteModal");
@@ -249,7 +247,6 @@
       .map((photo, index) => photoCard(photo, index))
       .join("");
 
-    renderPreviews();
     wireCards();
     initSortable();
   }
@@ -495,57 +492,6 @@
         </div>
       </article>
     `;
-  }
-
-  function renderPreviews() {
-    desktopPreview.innerHTML = previewItems(5);
-    mobilePreview.innerHTML = previewItems(6);
-  }
-
-  function previewItems(limit) {
-    const items = [];
-
-    for (let i = 0; i < limit; i++) {
-      const photo = photos[i];
-
-      if (!photo) {
-        items.push(`
-          <div class="preview-placeholder">
-            ${i + 1}
-          </div>
-        `);
-
-        continue;
-      }
-
-      const label =
-        photo.label === "before"
-          ? "Before"
-          : photo.label === "after"
-            ? "After"
-            : "";
-
-      items.push(`
-        <div class="preview-photo">
-
-          <img
-            src="${escapeHtml(
-              publicUrl(photo.storage_path)
-            )}"
-            alt=""
-          >
-
-          ${
-            label
-              ? `<span>${label}</span>`
-              : ""
-          }
-
-        </div>
-      `);
-    }
-
-    return items.join("");
   }
 
   function openPairModal(photo) {
@@ -2271,6 +2217,34 @@
           .remove("show");
       }
     );
+
+  const photosView = $("#photosView");
+  const statsView = $("#statsView");
+  const pageTitle = $("#pageTitle");
+  const pageEyebrow = $("#pageEyebrow");
+  const uploadPhotosAction = $("#uploadPhotosAction");
+
+  function switchView(view) {
+    const stats = view === "stats";
+    photosView.hidden = stats;
+    statsView.hidden = !stats;
+    pageTitle.textContent = stats ? "Website Stats" : "Project Photos";
+    pageEyebrow.textContent = stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
+    uploadPhotosAction.hidden = stats;
+    document.querySelectorAll(".side-nav button").forEach(button => {
+      const active = stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
+      button.classList.toggle("active", active);
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+    $("#sidebar")?.classList.remove("open");
+    $("#sidebarBackdrop")?.classList.remove("show");
+    window.scrollTo({ top: 0, behavior: "instant" });
+    updateScrollTopButton();
+  }
+
+  document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
+  document.querySelector('[data-scroll="photosSection"]')?.addEventListener("click", () => switchView("photos"));
 
   document
     .querySelectorAll(
