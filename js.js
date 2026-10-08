@@ -2218,6 +2218,118 @@
       }
     );
 
+  // Read-only admin analytics. RLS restricts records to dfl_admins.
+  const statsRange = $("#statsRange");
+  const statsStatus = $("#statsStatus");
+  const statsResults = $("#statsResults");
+  let statsRequest = 0;
+
+  const num = value => Number(value || 0).toLocaleString("en-US");
+  function statsDateKey(value) {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Los_Angeles",
+      year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(value);
+  }
+  function renderStatsRows(container, rows, empty = "No events recorded yet") {
+    container.replaceChildren();
+    if (!rows.length) {
+      const p = document.createElement("p");
+      p.className = "stats-no-data";
+      p.textContent = empty;
+      container.appendChild(p);
+      return;
+    }
+    const max = Math.max(...rows.map(row => row.count), 1);
+    rows.forEach(row => {
+      const line = document.createElement("div");
+      line.className = "stats-progress-row";
+      const label = document.createElement("div");
+      label.className = "stats-progress-label";
+      const name = document.createElement("span");
+      name.textContent = row.name;
+      const count = document.createElement("strong");
+      count.textContent = num(row.count);
+      label.append(name, count);
+      const track = document.createElement("div");
+      track.className = "stats-progress-track";
+      const bar = document.createElement("div");
+      bar.className = "stats-progress-fill";
+      bar.style.width = (row.count / max * 100) + "%";
+      track.appendChild(bar);
+      line.append(label, track);
+      container.appendChild(line);
+    });
+  }
+
+  async function loadWebsiteStats() {
+    const request = ++statsRequest;
+    statsStatus.textContent = "Loading real website statistics…";
+    statsResults.hidden = true;
+    const days = Number(statsRange.value);
+    const now = new Date();
+    const today = statsDateKey(now);
+    const todayStart = new Date(now);
+    // Compute LA midnight without depending on the viewer's local timezone.
+    const laClock = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Los_Angeles",
+      hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit"
+    }).formatToParts(now);
+    const part = type => Number(laClock.find(x => x.type === type)?.value || 0);
+    const timeSinceMidnight = ((part("hour") % 24) * 3600 + part("minute") * 60 + part("second")) * 1000;
+    todayStart.setTime(now.getTime() - timeSinceMidnight);
+    const since = new Date(todayStart.getTime() - (days - 1) * 86400000);
+    try {
+      const events = [];
+      const pageSize = 1000;
+      // Fetch all event pages, avoiding Supabase's default 1000-row cap.
+      for (let offset = 0; offset < 50000; offset += pageSize) {
+        const { data, error } = await client.from("dfl_analytics_events")
+          .select("created_at,event_type,event_name,visitor_id,page_path,device_type")
+          .gte("created_at", since.toISOString())
+          .order("created_at", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (request !== statsRequest) return;
+        events.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+        if (offset + pageSize >= 50000) throw new Error("Too many events for this report. Server-side aggregation is needed.");
+      }
+      const views = events.filter(e => e.event_type === "page_view");
+      const clicks = events.filter(e => e.event_type === "click");
+      const contactClicks = clicks.filter(e => /call_now|contact|estimate|email_click/i.test(e.event_name));
+      const successfulForms = events.filter(e => e.event_type === "form_submit");
+      $("#statPageViews").textContent = num(views.length);
+      $("#statVisitors").textContent = num(new Set(views.map(e => e.visitor_id)).size);
+      $("#statClicks").textContent = num(clicks.length);
+      $("#statContacts").textContent = num(contactClicks.length + successfulForms.length);
+      const counts = (items, key) => {
+        const map = new Map();
+        for (const item of items) {
+          const name = String(key(item) || "Unknown");
+          map.set(name, (map.get(name) || 0) + 1);
+        }
+        return [...map].map(([name, count]) => ({ name, count })).sort((a,b) => b.count - a.count);
+      };
+      // Use visit dates in Las Vegas time.
+      const byDay = counts(views, e => statsDateKey(new Date(e.created_at))).sort((a,b) => a.name.localeCompare(b.name));
+      renderStatsRows($("#statsVisitChart"), byDay);
+      renderStatsRows($("#statsClickChart"), counts(clicks, e => e.event_name).slice(0, 12));
+      renderStatsRows($("#statsPages"), counts(views, e => e.page_path).slice(0, 10));
+      renderStatsRows($("#statsDevices"), counts(views, e => e.device_type));
+      statsResults.hidden = false;
+      statsStatus.textContent = events.length
+        ? "Based on " + num(events.length) + " tracked events since " + since.toLocaleDateString("en-US") + "."
+        : "No tracked events found for this period yet.";
+    } catch (error) {
+      if (request !== statsRequest) return;
+      console.error("Website analytics loading failed:", error);
+      statsStatus.textContent = "Couldn't load analytics. Run the Batch 4 admin read-access SQL in Supabase, then refresh. " + (error?.message || "");
+    }
+  }
+  statsRange?.addEventListener("change", loadWebsiteStats);
+  $("#refreshStats")?.addEventListener("click", loadWebsiteStats);
+
   const photosView = $("#photosView");
   const statsView = $("#statsView");
   const pageTitle = $("#pageTitle");
@@ -2241,6 +2353,7 @@
     $("#sidebarBackdrop")?.classList.remove("show");
     window.scrollTo({ top: 0, behavior: "instant" });
     updateScrollTopButton();
+    if (stats) loadWebsiteStats();
   }
 
   document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
