@@ -1317,3 +1317,5 @@ button,
 .stats-no-data{color:var(--muted);font-size:13px}
 @media(max-width:900px){.stats-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.stats-panels{grid-template-columns:1fr}.stats-metrics article{padding:15px}.stats-toolbar{gap:8px}.stats-panel{padding:16px}}
+
+.stats-metrics article small{color:var(--muted);font-size:10px;line-height:1.45}
