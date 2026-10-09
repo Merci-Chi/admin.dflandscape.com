@@ -199,7 +199,7 @@
   // project's global Site URL because this Supabase project serves other businesses.
   const ADMIN_SIGN_IN_REDIRECT = "https://admin.dflandscape.com/";
   // Central recovery page for the shared Supabase auth project.
-  const PASSWORD_RESET_REDIRECT = "https://steadyhandsop.com/reset-password.html";
+  const PASSWORD_RESET_REDIRECT = "https://admin.dflandscape.com/reset-password.html";
 
   async function sendAuthEmail(recovery) {
     if (emailRequestBusy) return;
