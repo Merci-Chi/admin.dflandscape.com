@@ -1898,67 +1898,6 @@
       }
     );
 
-  const changePasswordModal = $("#changePasswordModal");
-  const changePasswordForm = $("#changePasswordForm");
-  const changePasswordError = $("#changePasswordError");
-  const saveChangePasswordButton = $("#saveChangePassword");
-
-  function closeChangePasswordModal() {
-    changePasswordForm.reset();
-    changePasswordError.hidden = true;
-    changePasswordModal.hidden = true;
-  }
-
-  $("#changePasswordButton").addEventListener("click", () => {
-    changePasswordError.hidden = true;
-    changePasswordModal.hidden = false;
-    $("#accountNewPassword").focus();
-    $("#sidebar")?.classList.remove("open");
-    $("#sidebarBackdrop")?.classList.remove("show");
-  });
-
-  $("#cancelChangePassword").addEventListener("click", closeChangePasswordModal);
-  changePasswordModal.addEventListener("click", (event) => {
-    if (event.target === changePasswordModal) closeChangePasswordModal();
-  });
-
-  changePasswordForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    changePasswordError.hidden = true;
-    const password = $("#accountNewPassword").value;
-    const confirmation = $("#accountConfirmPassword").value;
-    const strongEnough = password.length >= 8;
-    if (!strongEnough) {
-      changePasswordError.textContent = "Use at least 8 characters. A longer, unique password is strongly recommended for an admin account.";
-      changePasswordError.hidden = false;
-      return;
-    }
-    if (password !== confirmation) {
-      changePasswordError.textContent = "The passwords do not match.";
-      changePasswordError.hidden = false;
-      return;
-    }
-
-    setBusy(saveChangePasswordButton, true);
-    try {
-      const { data: sessionData, error: sessionError } = await client.auth.getSession();
-      if (sessionError) throw sessionError;
-      if (!sessionData.session?.user) throw new Error("Your admin session has expired. Sign in again before changing your password.");
-
-      const { error } = await client.auth.updateUser({ password });
-      if (error) throw error;
-
-      closeChangePasswordModal();
-      toast("Password updated successfully.");
-    } catch (error) {
-      console.error("Admin password update failed:", error);
-      changePasswordError.textContent = error?.message || "Could not update your password. Please try again.";
-      changePasswordError.hidden = false;
-    } finally {
-      setBusy(saveChangePasswordButton, false);
-    }
-  });
-
   $("#signOutButton")
     .addEventListener(
       "click",
@@ -2602,6 +2541,210 @@
   statsRange?.addEventListener("change", loadWebsiteStats);
   $("#refreshStats")?.addEventListener("click", loadWebsiteStats);
 
+  // Team management runs through a protected Edge Function using the current admin session.
+  const TEAM_FUNCTION_URL = SUPABASE_URL + "/functions/v1/admin-team-management";
+  const teamView = $("#teamView");
+  const teamStatus = $("#teamStatus");
+  const teamMembersList = $("#teamMembersList");
+  const teamMemberCount = $("#teamMemberCount");
+  const newMemberMailboxes = $("#newMemberMailboxes");
+  const addTeamMemberForm = $("#addTeamMemberForm");
+  const addTeamStatus = $("#addTeamStatus");
+  const addTeamMemberButton = $("#addTeamMemberButton");
+  const tempPasswordResult = $("#temporaryPasswordResult");
+  const tempPasswordSummary = $("#temporaryPasswordSummary");
+  const tempPasswordValue = $("#temporaryPasswordValue");
+  let teamData = { members: [], mailboxes: [] };
+  let teamLoaded = false;
+
+  async function callTeamApi(payload) {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Your session has expired. Sign in again.");
+    const response = await fetch(TEAM_FUNCTION_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token,
+        "apikey": SUPABASE_PUBLISHABLE_KEY
+      },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result?.error || "Team management request failed.");
+    return result;
+  }
+
+  function renderMailboxChoices(container, prefix, selected = []) {
+    if (!container) return;
+    if (!teamData.mailboxes.length) {
+      container.innerHTML = '<span class="muted">No active company mailboxes were found.</span>';
+      return;
+    }
+    container.innerHTML = teamData.mailboxes.map((mailbox, index) => {
+      const id = prefix + "-" + index;
+      const checked = selected.includes(mailbox) ? " checked" : "";
+      return '<label class="team-mailbox-choice" for="' + id + '">' +
+        '<input id="' + id + '" type="checkbox" value="' + escapeHtml(mailbox) + '"' + checked + '>' +
+        '<span>' + escapeHtml(mailbox) + '</span></label>';
+    }).join("");
+  }
+
+  function renderTeamMembers() {
+    teamMemberCount.textContent = String(teamData.members.length);
+    if (!teamData.members.length) {
+      teamMembersList.innerHTML = '<div class="state-box"><i class="fa-solid fa-users"></i><strong>No team members yet</strong><span>Create the first company email login above.</span></div>';
+      return;
+    }
+    teamMembersList.innerHTML = teamData.members.map((member, index) => {
+      const role = member.role === "admin" ? "admin" : "user";
+      const checkedActive = member.active ? " checked" : "";
+      const statusText = member.active ? "Active" : "Disabled";
+      const setupText = member.needsSetup ? "Setup required at next login" : "Setup complete";
+      const mailboxes = (member.mailboxes || []).filter(Boolean);
+      const mailboxChoices = teamData.mailboxes.map((mailbox, mailboxIndex) => {
+        const id = "member-" + index + "-mailbox-" + mailboxIndex;
+        const checked = mailboxes.includes(mailbox) ? " checked" : "";
+        return '<label class="team-mailbox-choice" for="' + id + '">' +
+          '<input id="' + id + '" type="checkbox" data-member-mailbox value="' + escapeHtml(mailbox) + '"' + checked + '>' +
+          '<span>' + escapeHtml(mailbox) + '</span></label>';
+      }).join("");
+      const joined = member.createdAt ? new Date(member.createdAt).toLocaleDateString() : "—";
+      return '<article class="team-member-card" data-member-id="' + escapeHtml(member.userId) + '">' +
+        '<div class="team-member-head"><div><h3>' + escapeHtml(member.displayName || member.email) + '</h3>' +
+        '<p>' + escapeHtml(member.email) + '</p><div class="team-badges"><span class="team-badge ' + (member.active ? "good" : "inactive") + '">' + statusText + '</span>' +
+        '<span class="team-badge ' + (member.needsSetup ? "pending" : "good") + '">' + setupText + '</span><span class="team-badge">' + escapeHtml(role === "admin" ? "Email admin" : "Team member") + '</span></div></div>' +
+        '<button class="secondary team-reset-btn" type="button" data-team-action="reset"><i class="fa-solid fa-key"></i> Reset temporary password</button></div>' +
+        '<div class="team-member-settings"><label class="team-field"><span>Email role</span><select data-member-role><option value="user"' + (role === "user" ? " selected" : "") + '>Team member</option><option value="admin"' + (role === "admin" ? " selected" : "") + '>Email admin</option></select></label>' +
+        '<label class="team-active-toggle"><input type="checkbox" data-member-active' + checkedActive + '> Account active</label>' +
+        '<div class="team-mailbox-access"><strong>Mailbox access</strong><div class="team-mailbox-options">' + (mailboxChoices || '<span class="muted">No active mailboxes.</span>') + '</div>' +
+        (role === "admin" ? '<p class="team-help">Email admins can access all active mailboxes. Choose Team member to restrict access to selected mailboxes.</p>' : '') +
+        '</div></div><div class="team-member-footer"><span>Created ' + escapeHtml(joined) + '</span><button class="primary" type="button" data-team-action="save"><i class="fa-solid fa-floppy-disk"></i> Save access & role</button></div>' +
+        '</article>';
+    }).join("");
+
+    teamMembersList.querySelectorAll("[data-team-action]").forEach(button => {
+      button.addEventListener("click", async () => {
+        const card = button.closest("[data-member-id]");
+        const userId = card?.dataset.memberId;
+        const action = button.dataset.teamAction;
+        const member = teamData.members.find(item => item.userId === userId);
+        if (!userId || !member) return;
+        if (action === "reset") {
+          if (!confirm("Create a new temporary password for " + member.email + "? Their next sign-in will require a display name and new password.")) return;
+          button.disabled = true;
+          const old = button.innerHTML;
+          button.textContent = "Creating…";
+          try {
+            const result = await callTeamApi({ action: "reset_temporary_password", userId });
+            showTemporaryPassword(result.email || member.email, result.tempPassword, "Temporary password reset for ");
+            await loadTeamMembers();
+            toast("Temporary password created.");
+          } catch (error) {
+            toast(error?.message || "Could not reset the temporary password.", "error");
+          } finally {
+            button.disabled = false;
+            button.innerHTML = old;
+          }
+        } else if (action === "save") {
+          button.disabled = true;
+          const old = button.innerHTML;
+          button.textContent = "Saving…";
+          try {
+            const role = card.querySelector("[data-member-role]").value;
+            const active = card.querySelector("[data-member-active]").checked;
+            const mailboxes = [...card.querySelectorAll("[data-member-mailbox]:checked")].map(input => input.value);
+            await callTeamApi({ action: "set_role", userId, role });
+            await callTeamApi({ action: "set_active", userId, active });
+            await callTeamApi({ action: "set_mailbox_access", userId, mailboxes });
+            await loadTeamMembers();
+            toast("Team member settings saved.");
+          } catch (error) {
+            toast(error?.message || "Could not save team member settings.", "error");
+          } finally {
+            button.disabled = false;
+            button.innerHTML = old;
+          }
+        }
+      });
+    });
+  }
+
+  function showTemporaryPassword(email, password, prefix = "Temporary password created for ") {
+    tempPasswordSummary.textContent = prefix + email + ". Copy it now; it won't be sent automatically by email.";
+    tempPasswordValue.textContent = password || "";
+    tempPasswordResult.hidden = false;
+    tempPasswordResult.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  async function loadTeamMembers() {
+    teamStatus.textContent = "Loading team…";
+    try {
+      const data = await callTeamApi({ action: "list" });
+      teamData = {
+        members: Array.isArray(data.members) ? data.members : [],
+        mailboxes: Array.isArray(data.mailboxes) ? data.mailboxes : []
+      };
+      renderTeamMembers();
+      renderMailboxChoices(newMemberMailboxes, "new-member-mailbox", []);
+      teamStatus.textContent = teamData.members.length + " team member" + (teamData.members.length === 1 ? "" : "s") + " · " + teamData.mailboxes.length + " active mailboxes";
+      teamLoaded = true;
+      return true;
+    } catch (error) {
+      console.error("Team list failed:", error);
+      teamStatus.textContent = error?.message || "Could not load team.";
+      teamMembersList.innerHTML = '<div class="state-box"><i class="fa-solid fa-triangle-exclamation"></i><strong>Team could not be loaded</strong><span>' + escapeHtml(error?.message || "Deploy the admin-team-management Edge Function, then refresh this page.") + '</span></div>';
+      newMemberMailboxes.innerHTML = '<span class="muted">Team service unavailable.</span>';
+      teamMemberCount.textContent = "—";
+      return false;
+    }
+  }
+
+  addTeamMemberForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    addTeamStatus.hidden = true;
+    const displayName = $("#newTeamDisplayName").value.trim();
+    const email = $("#newTeamEmail").value.trim().toLowerCase();
+    const mailboxes = [...newMemberMailboxes.querySelectorAll('input[type="checkbox"]:checked')].map(input => input.value);
+    addTeamMemberButton.disabled = true;
+    addTeamMemberButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Creating…';
+    try {
+      const result = await callTeamApi({ action: "add_member", displayName, email, mailboxes });
+      showTemporaryPassword(result.email || email, result.tempPassword, "New temporary login created for ");
+      addTeamStatus.textContent = "Team login created. Copy its temporary password from the result card below.";
+      addTeamStatus.classList.add("success");
+      addTeamStatus.hidden = false;
+      addTeamMemberForm.reset();
+      await loadTeamMembers();
+      tempPasswordResult.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (error) {
+      addTeamStatus.classList.remove("success");
+      addTeamStatus.textContent = error?.message || "Could not create the team login.";
+      addTeamStatus.hidden = false;
+    } finally {
+      addTeamMemberButton.disabled = false;
+      addTeamMemberButton.innerHTML = '<i class="fa-solid fa-user-plus"></i> Create team login';
+    }
+  });
+
+  $("#refreshTeam").addEventListener("click", loadTeamMembers);
+  $("#copyTemporaryPassword").addEventListener("click", async () => {
+    const value = tempPasswordValue.textContent || "";
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast("Temporary password copied.");
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(tempPasswordValue);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      toast("Select and copy the highlighted password.");
+    }
+  });
+
   const photosView = $("#photosView");
   const statsView = $("#statsView");
   const pageTitle = $("#pageTitle");
@@ -2610,13 +2753,15 @@
 
   function switchView(view) {
     const stats = view === "stats";
-    photosView.hidden = stats;
+    const team = view === "team";
+    photosView.hidden = stats || team;
     statsView.hidden = !stats;
-    pageTitle.textContent = stats ? "Website Stats" : "Project Photos";
-    pageEyebrow.textContent = stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
-    uploadPhotosAction.hidden = stats;
+    teamView.hidden = !team;
+    pageTitle.textContent = team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
+    pageEyebrow.textContent = team ? "ACCOUNT ADMINISTRATION" : stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
+    uploadPhotosAction.hidden = stats || team;
     document.querySelectorAll(".side-nav button").forEach(button => {
-      const active = stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
+      const active = team ? button.dataset.view === "team" : stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
@@ -2626,9 +2771,11 @@
     window.scrollTo({ top: 0, behavior: "instant" });
     updateScrollTopButton();
     if (stats) loadWebsiteStats();
+    if (team) loadTeamMembers();
   }
 
   document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
+  document.querySelector('[data-view="team"]')?.addEventListener("click", () => switchView("team"));
   document.querySelector('[data-scroll="photosSection"]')?.addEventListener("click", () => switchView("photos"));
 
   document
