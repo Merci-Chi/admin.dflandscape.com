@@ -35,6 +35,11 @@
 
   const forgotPasswordButton = $("#forgotPasswordButton");
   const emailLinkButton = $("#emailLinkButton");
+  const magicCodeForm = $("#magicCodeForm");
+  const magicCodeEmail = $("#magicCodeEmail");
+  const magicCodeInput = $("#magicCode");
+  const verifyMagicCodeButton = $("#verifyMagicCodeButton");
+  const magicCodeMessage = $("#magicCodeMessage");
   const loginStatus = $("#loginStatus");
   const resetPasswordForm = $("#resetPasswordForm");
   const resetPasswordError = $("#resetPasswordError");
@@ -219,10 +224,18 @@
       if (error) throw error;
       if (saveEmailCheckbox.checked) window.localStorage.setItem(SAVED_EMAIL_KEY, email);
       else window.localStorage.removeItem(SAVED_EMAIL_KEY);
-      loginStatus.textContent = recovery
-        ? "If this email has an account, a password reset link has been sent. Check your inbox and spam folder."
-        : "Check your inbox and spam folder for your one-time login link.";
-      loginStatus.hidden = false;
+      if (recovery) {
+        loginStatus.textContent = "If this email has an account, a password reset email has been sent. Check your inbox and spam folder.";
+        loginStatus.hidden = false;
+      } else {
+        magicCodeEmail.value = email;
+        loginForm.hidden = true;
+        resetPasswordForm.hidden = true;
+        magicCodeForm.hidden = false;
+        magicCodeMessage.textContent = "Enter the one-time code from the email we just sent.";
+        magicCodeMessage.hidden = false;
+        magicCodeInput.focus();
+      }
     } catch (error) {
       loginError.textContent = error?.message || "Could not send the email. Please try again.";
       loginError.hidden = false;
@@ -237,6 +250,39 @@
 
   forgotPasswordButton.addEventListener("click", () => sendAuthEmail(true));
   emailLinkButton.addEventListener("click", () => sendAuthEmail(false));
+
+  magicCodeForm.addEventListener("submit", async event => {
+    event.preventDefault();
+    const email = magicCodeEmail.value.trim().toLowerCase();
+    const token = magicCodeInput.value.trim().replace(/\\s/g, "");
+    magicCodeMessage.hidden = true;
+    if (!email || !token) {
+      magicCodeMessage.textContent = "Enter the email address and one-time code.";
+      magicCodeMessage.hidden = false;
+      return;
+    }
+    setBusy(verifyMagicCodeButton, true);
+    try {
+      const { data, error } = await client.auth.verifyOtp({ email, token, type: "email" });
+      if (error) throw error;
+      if (!data?.session?.user) throw new Error("The code wasn't accepted. Check the newest email and try again.");
+      magicCodeInput.value = "";
+      magicCodeForm.hidden = true;
+      await enterApp(data.session);
+    } catch (error) {
+      magicCodeMessage.textContent = error?.message || "Could not verify this code. Request a new one and try again.";
+      magicCodeMessage.hidden = false;
+    } finally {
+      setBusy(verifyMagicCodeButton, false);
+    }
+  });
+
+  $("#backFromMagicCodeButton").addEventListener("click", () => {
+    magicCodeForm.hidden = true;
+    loginForm.hidden = false;
+    magicCodeInput.value = "";
+    magicCodeMessage.hidden = true;
+  });
 
   resetPasswordForm.addEventListener("submit", async event => {
     event.preventDefault();
