@@ -1486,3 +1486,9 @@ button,
 .save-email-check{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 20px!important;width:20px!important;height:20px!important;line-height:1!important;border:1.5px solid #93a597;border-radius:5px;background:#fff;color:transparent;font-size:13px;font-weight:900;box-sizing:border-box}
 .save-email-row input:checked+.save-email-check{background:#173622;color:#fff;border-color:#173622}
 .save-email-row input:focus-visible+.save-email-check{outline:3px solid #9db6a3;outline-offset:2px}
+
+
+/* Exact company email login footer and white checkmark */
+#loginView .small-note{margin-top:12px;font-size:12px;color:#7e887e;text-align:center}
+#loginView .save-email-check{font-family:Arial,sans-serif;font-size:13px;font-weight:900;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important}
+#loginView .save-email-row input:checked+.save-email-check{background:#173622!important;color:#fff!important;border-color:#173622!important}
