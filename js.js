@@ -22,8 +22,7 @@
   });
 
   const $ = (selector) => document.querySelector(selector);
-  // Always return password recovery to this app, never Supabase Site URL or another business.
-  const PASSWORD_RESET_REDIRECT = "https://steadyhandsop.com/reset-password.html";
+  // Save the email locally only when the user opts in.
   const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
 
   const loginView = $("#loginView");
@@ -194,7 +193,8 @@
   // Keep both authentication flows pinned to this app. Do not use the Supabase
   // project's global Site URL because this Supabase project serves other businesses.
   const ADMIN_SIGN_IN_REDIRECT = "https://admin.dflandscape.com/";
-  const PASSWORD_RESET_REDIRECT = "https://admin.dflandscape.com/reset-password.html";
+  // Central recovery page for the shared Supabase auth project.
+  const PASSWORD_RESET_REDIRECT = "https://steadyhandsop.com/reset-password.html";
 
   async function sendAuthEmail(recovery) {
     if (emailRequestBusy) return;
