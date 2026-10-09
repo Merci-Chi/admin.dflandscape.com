@@ -1,5 +1,5 @@
 // Update this version whenever the admin app shell changes.
-const CACHE_NAME = 'dfl-admin-pwa-20261008-4';
+const CACHE_NAME = 'dfl-admin-pwa-20261008-5';
 const SHELL = [
   '/',
   '/index.html',
