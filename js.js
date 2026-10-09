@@ -1898,6 +1898,71 @@
       }
     );
 
+  const changePasswordModal = $("#changePasswordModal");
+  const changePasswordForm = $("#changePasswordForm");
+  const changePasswordError = $("#changePasswordError");
+  const saveChangePasswordButton = $("#saveChangePassword");
+
+  function closeChangePasswordModal() {
+    changePasswordForm.reset();
+    changePasswordError.hidden = true;
+    changePasswordModal.hidden = true;
+  }
+
+  $("#changePasswordButton").addEventListener("click", () => {
+    changePasswordError.hidden = true;
+    changePasswordModal.hidden = false;
+    $("#accountNewPassword").focus();
+    $("#sidebar")?.classList.remove("open");
+    $("#sidebarBackdrop")?.classList.remove("show");
+  });
+
+  $("#cancelChangePassword").addEventListener("click", closeChangePasswordModal);
+  changePasswordModal.addEventListener("click", (event) => {
+    if (event.target === changePasswordModal) closeChangePasswordModal();
+  });
+
+  changePasswordForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    changePasswordError.hidden = true;
+    const password = $("#accountNewPassword").value;
+    const confirmation = $("#accountConfirmPassword").value;
+    const strongEnough = password.length >= 8 &&
+      /[A-Z]/.test(password) &&
+      /[0-9]/.test(password) &&
+      /[^A-Za-z0-9]/.test(password) &&
+      password.toLowerCase() !== "password";
+    if (!strongEnough) {
+      changePasswordError.textContent = "Use at least 8 characters, including an uppercase letter, a number, and a symbol. Choose a unique password instead of “password.”";
+      changePasswordError.hidden = false;
+      return;
+    }
+    if (password !== confirmation) {
+      changePasswordError.textContent = "The passwords do not match.";
+      changePasswordError.hidden = false;
+      return;
+    }
+
+    setBusy(saveChangePasswordButton, true);
+    try {
+      const { data: sessionData, error: sessionError } = await client.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!sessionData.session?.user) throw new Error("Your admin session has expired. Sign in again before changing your password.");
+
+      const { error } = await client.auth.updateUser({ password });
+      if (error) throw error;
+
+      closeChangePasswordModal();
+      toast("Password updated successfully.");
+    } catch (error) {
+      console.error("Admin password update failed:", error);
+      changePasswordError.textContent = error?.message || "Could not update your password. Please try again.";
+      changePasswordError.hidden = false;
+    } finally {
+      setBusy(saveChangePasswordButton, false);
+    }
+  });
+
   $("#signOutButton")
     .addEventListener(
       "click",
