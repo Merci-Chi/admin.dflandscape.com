@@ -112,6 +112,10 @@
         </button>
       </nav>
 
+      <button id="changePasswordButton" class="signout" type="button">
+        <i class="fa-solid fa-key"></i>
+        Change password
+      </button>
       <button id="signOutButton" class="signout signout-near-nav" type="button">
         <i class="fa-solid fa-arrow-right-from-bracket"></i>
         Sign out
@@ -288,9 +292,29 @@
     </div>
   </div>
 
+  <div id="changePasswordModal" class="modal-bg" hidden>
+    <div class="modal change-password-modal" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
+      <div class="modal-icon" style="background:#eaf3ed;color:#123b2a"><i class="fa-solid fa-key"></i></div>
+      <h2 id="changePasswordTitle">Change your password</h2>
+      <p>You're signed in. Set a new password for this admin account here—no email reset link is needed.</p>
+      <form id="changePasswordForm" class="change-password-form">
+        <label for="accountNewPassword">New password</label>
+        <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
+        <label for="accountConfirmPassword">Confirm new password</label>
+        <input id="accountConfirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter the same password again">
+        <p class="password-requirements">Use at least 8 characters, including an uppercase letter, a number, and a symbol. Don't use the literal word “password.”</p>
+        <p id="changePasswordError" class="form-error" role="alert" hidden></p>
+        <div class="modal-actions">
+          <button id="cancelChangePassword" class="secondary" type="button">Cancel</button>
+          <button id="saveChangePassword" class="primary" type="submit">Update password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-6"></script>
+  <script src="js.js?v=20261008-7"></script>
   <script>
     // Keep the installed admin web app current without reinstalling it.
     if ('serviceWorker' in navigator) {
