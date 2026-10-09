@@ -1468,7 +1468,7 @@ button,
 #loginView .brand-text{width:100%;max-width:300px;height:auto;object-fit:contain}
 #loginView .brand-slogan-row{display:flex;align-items:flex-end;justify-content:center;width:100%;margin-top:-10px}
 #loginView .brand-slogan{width:78%;max-width:235px;height:auto;object-fit:contain}
-#loginView .brand-leaf{width:20%;max-width:52px;height:auto;object-fit:contain}
+#loginView .brand-leaf{width:42px;height:42px;object-fit:contain;margin-left:4px;margin-bottom:-5px;transform:rotate(70deg);flex-shrink:0}
 #loginView .login-card-body{padding:28px 34px 34px}
 #loginView .login-card h1{font:800 34px/1.2 Inter,Arial,sans-serif;margin:4px 0 6px;color:#173622}
 #loginView .login-copy{margin:0 0 28px;color:#6d786f}
