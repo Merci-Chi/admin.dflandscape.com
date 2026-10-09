@@ -189,11 +189,10 @@
     resetPasswordForm.hidden = false;
   }
 
-  function authRedirect(recovery = false) {
-    const url = new URL(window.location.pathname, window.location.origin);
-    if (recovery) url.searchParams.set("auth", "recovery");
-    return url.href;
-  }
+  // Keep both authentication flows pinned to this app. Do not use the Supabase
+  // project's global Site URL because this Supabase project serves other businesses.
+  const ADMIN_SIGN_IN_REDIRECT = "https://admin.dflandscape.com/";
+  const PASSWORD_RESET_REDIRECT = "https://admin.dflandscape.com/reset-password.html";
 
   async function sendAuthEmail(recovery) {
     if (emailRequestBusy) return;
@@ -213,7 +212,7 @@
         ? await client.auth.resetPasswordForEmail(email, { redirectTo: PASSWORD_RESET_REDIRECT })
         : await client.auth.signInWithOtp({ email, options: {
             shouldCreateUser: false,
-            emailRedirectTo: authRedirect()
+            emailRedirectTo: ADMIN_SIGN_IN_REDIRECT
           } });
       if (error) throw error;
       if (saveEmailCheckbox.checked) window.localStorage.setItem(SAVED_EMAIL_KEY, email);
