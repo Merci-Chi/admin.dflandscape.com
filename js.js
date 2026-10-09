@@ -1927,13 +1927,9 @@
     changePasswordError.hidden = true;
     const password = $("#accountNewPassword").value;
     const confirmation = $("#accountConfirmPassword").value;
-    const strongEnough = password.length >= 8 &&
-      /[A-Z]/.test(password) &&
-      /[0-9]/.test(password) &&
-      /[^A-Za-z0-9]/.test(password) &&
-      password.toLowerCase() !== "password";
+    const strongEnough = password.length >= 8;
     if (!strongEnough) {
-      changePasswordError.textContent = "Use at least 8 characters, including an uppercase letter, a number, and a symbol. Choose a unique password instead of “password.”";
+      changePasswordError.textContent = "Use at least 8 characters. A longer, unique password is strongly recommended for an admin account.";
       changePasswordError.hidden = false;
       return;
     }
