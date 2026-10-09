@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-  <link rel="stylesheet" href="css.css?v=20261008-9">
+  <link rel="stylesheet" href="css.css?v=20261008-10">
 </head>
 <body>
   <div id="toast" class="toast" aria-live="polite"></div>
@@ -65,9 +65,7 @@
 
         <label class="save-email-row" for="saveEmail">
           <input id="saveEmail" type="checkbox">
-          <span class="save-email-check" aria-hidden="true">
-            <i class="fa-solid fa-check"></i>
-          </span>
+          <span class="save-email-check" aria-hidden="true">✓</span>
           <span>Save email for login to this device</span>
         </label>
 
@@ -116,6 +114,7 @@
         <button id="cancelResetButton" class="secondary wide" type="button">Back to sign in</button>
         <p id="resetPasswordError" class="form-error" role="alert" hidden></p>
       </form>
+        <p class="small-note">Secure company email access.</p>
       </div>
     </div>
   </section>
