@@ -225,8 +225,7 @@
       if (saveEmailCheckbox.checked) window.localStorage.setItem(SAVED_EMAIL_KEY, email);
       else window.localStorage.removeItem(SAVED_EMAIL_KEY);
       if (recovery) {
-        loginStatus.textContent = "If this email has an account, a password-reset code and reset-page link have been sent. Check your inbox and spam folder.";
-        loginStatus.hidden = false;
+        window.location.assign(PASSWORD_RESET_REDIRECT + "?sent=1&email=" + encodeURIComponent(email));
       } else {
         magicCodeEmail.value = email;
         loginForm.hidden = true;
