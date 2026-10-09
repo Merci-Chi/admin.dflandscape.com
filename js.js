@@ -22,7 +22,7 @@
   });
 
   const $ = (selector) => document.querySelector(selector);
-  // Always return password recovery to this app, never Supabase Site URL or another business.\n  const PASSWORD_RESET_REDIRECT = "https://admin.dflandscape.com/reset-password.html";\n  const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
+  // Always return password recovery to this app, never Supabase Site URL or another business.\n  const PASSWORD_RESET_REDIRECT = "https://steadyhandsop.com/reset-password.html";\n  const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
 
   const loginView = $("#loginView");
   const appView = $("#appView");
