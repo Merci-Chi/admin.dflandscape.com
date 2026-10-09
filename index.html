@@ -26,15 +26,22 @@
 
   <section id="loginView" class="login-shell">
     <div class="login-card">
-      <div class="login-brand">
-        <img src="https://dflandscape.com/images/logo.png" alt="Desert Forest Landscape logo">
-        <div>
-          <span class="eyebrow">DESERT FOREST LANDSCAPE</span>
-          <h1>Photo Admin</h1>
-        </div>
+      <div class="login-brand-header">
+        <a class="login-header-brand" href="https://dflandscape.com" aria-label="Desert Forest Landscape home">
+          <img class="login-main-logo" src="https://raw.githubusercontent.com/Merci-Chi/DFLandscape/main/images/logo.png" alt="Desert Forest Landscape logo">
+          <div class="login-brand-images">
+            <img class="brand-text" src="https://raw.githubusercontent.com/Merci-Chi/DFLandscape/main/images/text.png" alt="Desert Forest Landscape">
+            <div class="brand-slogan-row">
+              <img class="brand-slogan" src="https://raw.githubusercontent.com/Merci-Chi/DFLandscape/main/images/slogan.png" alt="Turning Over a New Leaf">
+              <img class="brand-leaf" src="https://raw.githubusercontent.com/Merci-Chi/DFLandscape/main/images/leaf.png" alt="">
+            </div>
+          </div>
+        </a>
       </div>
-
-      <p class="login-copy">Sign in to upload, label, delete, and reorder project photos.</p>
+      <div class="login-card-body">
+        <div class="eyebrow">Photo Management</div>
+        <h1>Photo Admin</h1>
+        <p class="login-copy">Sign in to manage your project photos.</p>
 
       <form id="loginForm" class="login-form">
         <label>
@@ -109,6 +116,7 @@
         <button id="cancelResetButton" class="secondary wide" type="button">Back to sign in</button>
         <p id="resetPasswordError" class="form-error" role="alert" hidden></p>
       </form>
+      </div>
     </div>
   </section>
 
