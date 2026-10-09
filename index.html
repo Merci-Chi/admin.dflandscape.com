@@ -110,12 +110,12 @@
           <i class="fa-solid fa-chart-line"></i>
           Website Stats
         </button>
+        <button type="button" data-view="team">
+          <i class="fa-solid fa-users-gear"></i>
+          Manage Team
+        </button>
       </nav>
 
-      <button id="changePasswordButton" class="signout" type="button">
-        <i class="fa-solid fa-key"></i>
-        Change password
-      </button>
       <button id="signOutButton" class="signout signout-near-nav" type="button">
         <i class="fa-solid fa-arrow-right-from-bracket"></i>
         Sign out
@@ -236,6 +236,46 @@
           </div>
         </section>
       </div>
+      <div class="content stats-view team-view" id="teamView" hidden>
+        <section class="section-card stats-intro">
+          <span class="eyebrow">ACCOUNT ADMINISTRATION</span>
+          <h1>Manage Team</h1>
+          <p>Manage company email logins, temporary passwords, onboarding, and each person's mailbox access. Admin roles can see all active mailboxes; team members only see the mailboxes assigned to them.</p>
+          <div class="team-toolbar">
+            <button class="secondary" id="refreshTeam" type="button"><i class="fa-solid fa-rotate-right"></i> Refresh team</button>
+            <span id="teamStatus" class="stats-status" role="status">Load the team to view members.</span>
+          </div>
+        </section>
+
+        <section class="section-card team-create-card">
+          <div class="section-head">
+            <div><span class="eyebrow">NEW ACCOUNT</span><h2>Add a team member</h2><p>Creates a login with a one-time temporary password. Their first login requires a display name and a new password.</p></div>
+          </div>
+          <form id="addTeamMemberForm" class="team-create-form">
+            <label for="newTeamDisplayName">Display name</label>
+            <input id="newTeamDisplayName" type="text" maxlength="100" required placeholder="Team member's name">
+            <label for="newTeamEmail">Login email</label>
+            <input id="newTeamEmail" type="email" maxlength="254" required placeholder="person@example.com">
+            <fieldset class="team-mailbox-fieldset"><legend>Mailboxes they can access</legend><div id="newMemberMailboxes" class="team-mailbox-options"><span class="muted">Loading mailboxes…</span></div></fieldset>
+            <button class="primary" id="addTeamMemberButton" type="submit"><i class="fa-solid fa-user-plus"></i> Create team login</button>
+            <p id="addTeamStatus" class="form-status" role="status" hidden></p>
+          </form>
+        </section>
+
+        <section class="section-card team-list-card">
+          <div class="section-head">
+            <div><span class="eyebrow">CURRENT MEMBERS</span><h2>Team access</h2><p>Save role, active status, and mailbox assignments per person.</p></div>
+            <div class="photo-count"><strong id="teamMemberCount">—</strong><span>members</span></div>
+          </div>
+          <div id="teamMembersList" class="team-members-list"><div class="state-box"><i class="fa-solid fa-users"></i><span>Select Manage Team to load current members.</span></div></div>
+          <div id="temporaryPasswordResult" class="temporary-password-result" hidden>
+            <h3><i class="fa-solid fa-key"></i> Temporary password created</h3>
+            <p id="temporaryPasswordSummary"></p>
+            <div class="temporary-password-value"><code id="temporaryPasswordValue"></code><button type="button" id="copyTemporaryPassword" class="secondary">Copy</button></div>
+            <p class="password-warning">This password is shown only here. Share it securely. The person must set a display name and choose a new password at their next sign-in.</p>
+          </div>
+        </section>
+      </div>
     </main>
   </div>
 
@@ -292,29 +332,9 @@
     </div>
   </div>
 
-  <div id="changePasswordModal" class="modal-bg" hidden>
-    <div class="modal change-password-modal" role="dialog" aria-modal="true" aria-labelledby="changePasswordTitle">
-      <div class="modal-icon" style="background:#eaf3ed;color:#123b2a"><i class="fa-solid fa-key"></i></div>
-      <h2 id="changePasswordTitle">Change your password</h2>
-      <p>You're signed in. Set a new password for this admin account here—no email reset link is needed.</p>
-      <form id="changePasswordForm" class="change-password-form">
-        <label for="accountNewPassword">New password</label>
-        <input id="accountNewPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters">
-        <label for="accountConfirmPassword">Confirm new password</label>
-        <input id="accountConfirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Enter the same password again">
-        <p class="password-requirements">Use at least 8 characters. “password” is allowed if you explicitly choose it, but it is not safe for an admin account.</p>
-        <p id="changePasswordError" class="form-error" role="alert" hidden></p>
-        <div class="modal-actions">
-          <button id="cancelChangePassword" class="secondary" type="button">Cancel</button>
-          <button id="saveChangePassword" class="primary" type="submit">Update password</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-7"></script>
+  <script src="js.js?v=20261008-8"></script>
   <script>
     // Keep the installed admin web app current without reinstalling it.
     if ('serviceWorker' in navigator) {
