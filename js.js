@@ -22,7 +22,7 @@
   });
 
   const $ = (selector) => document.querySelector(selector);
-  const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
+  // Always return password recovery to this app, never Supabase Site URL or another business.\n  const PASSWORD_RESET_REDIRECT = "https://admin.dflandscape.com/reset-password.html";\n  const SAVED_EMAIL_KEY = "dfl_admin_saved_email";
 
   const loginView = $("#loginView");
   const appView = $("#appView");
@@ -210,7 +210,7 @@
     try {
       const email = emailInput.value;
       const { error } = recovery
-        ? await client.auth.resetPasswordForEmail(email, { redirectTo: "https://admin.dflandscape.com/reset-password.html" })
+        ? await client.auth.resetPasswordForEmail(email, { redirectTo: PASSWORD_RESET_REDIRECT })
         : await client.auth.signInWithOtp({ email, options: {
             shouldCreateUser: false,
             emailRedirectTo: authRedirect()
