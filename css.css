@@ -1456,3 +1456,33 @@ button,
   .team-badge{width:max-content;max-width:100%;box-sizing:border-box}
   .team-member-head h3{font-size:15px}
 }
+
+
+/* Admin login now shares the company email login presentation */
+#loginView.login-shell{background:linear-gradient(135deg,#08170d,#173622);padding:24px;min-height:100dvh}
+#loginView .login-card{width:min(100%,460px);padding:0;background:#fff;border:1px solid rgba(215,179,96,.28);border-radius:18px;overflow:hidden;text-align:center}
+#loginView .login-brand-header{background:linear-gradient(90deg,#12311f 0%,#0f2617 55%,#173622 100%);padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+#loginView .login-header-brand{display:flex;align-items:center;justify-content:flex-start;gap:12px;text-decoration:none;width:100%}
+#loginView .login-main-logo{width:52px;height:52px;object-fit:contain;flex:0 0 auto}
+#loginView .login-brand-images{display:flex;flex-direction:column;min-width:0;flex:1;max-width:300px}
+#loginView .brand-text{width:100%;max-width:300px;height:auto;object-fit:contain}
+#loginView .brand-slogan-row{display:flex;align-items:flex-end;justify-content:center;width:100%;margin-top:-10px}
+#loginView .brand-slogan{width:78%;max-width:235px;height:auto;object-fit:contain}
+#loginView .brand-leaf{width:20%;max-width:52px;height:auto;object-fit:contain}
+#loginView .login-card-body{padding:28px 34px 34px}
+#loginView .login-card h1{font:800 34px/1.2 Inter,Arial,sans-serif;margin:4px 0 6px;color:#173622}
+#loginView .login-copy{margin:0 0 28px;color:#6d786f}
+#loginView .login-form{text-align:left;gap:15px}
+#loginView .login-form label>span{font-size:13px;color:#394239}
+#loginView .input-wrap input{border-radius:9px;border-color:#ccd5cc}
+#loginView .primary{background:#173622;border-radius:9px}
+#loginView .secondary{background:transparent;color:#31573a;box-shadow:none}
+#loginView .eyebrow{color:#63705f}
+@media(max-width:620px){#loginView.login-shell{padding:14px}#loginView .login-card{padding:0;border-radius:18px}#loginView .login-card-body{padding:24px 20px 26px}#loginView .login-brand-header{padding:14px 16px}#loginView .login-main-logo{width:44px;height:44px}}
+
+/* Matching device-email checkbox: center the check in both axes */
+.save-email-row{display:flex!important;align-items:center!important;justify-content:flex-start;gap:10px;min-height:36px;cursor:pointer;text-align:left;position:relative;font-size:12px;font-weight:750;user-select:none}
+.save-email-row input[type="checkbox"]{position:absolute!important;opacity:0!important;width:20px!important;height:20px!important;margin:0!important;pointer-events:none}
+.save-email-check{display:flex!important;align-items:center!important;justify-content:center!important;flex:0 0 20px!important;width:20px!important;height:20px!important;line-height:1!important;border:1.5px solid #93a597;border-radius:5px;background:#fff;color:transparent;font-size:13px;font-weight:900;box-sizing:border-box}
+.save-email-row input:checked+.save-email-check{background:#173622;color:#fff;border-color:#173622}
+.save-email-row input:focus-visible+.save-email-check{outline:3px solid #9db6a3;outline-offset:2px}
