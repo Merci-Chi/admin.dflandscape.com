@@ -247,7 +247,7 @@
     }
   }
 
-  forgotPasswordButton.addEventListener("click", () => sendAuthEmail(true));
+  forgotPasswordButton.addEventListener("click", () => { const email = emailInput.value.trim(); if (!emailInput.reportValidity()) return; window.location.href = PASSWORD_RESET_REDIRECT + "?email=" + encodeURIComponent(email); });
   emailLinkButton.addEventListener("click", () => sendAuthEmail(false));
 
   magicCodeForm.addEventListener("submit", async event => {
