@@ -210,7 +210,7 @@
     try {
       const email = emailInput.value;
       const { error } = recovery
-        ? await client.auth.resetPasswordForEmail(email, { redirectTo: authRedirect(true) })
+        ? await client.auth.resetPasswordForEmail(email, { redirectTo: "https://admin.dflandscape.com/reset-password.html" })
         : await client.auth.signInWithOtp({ email, options: {
             shouldCreateUser: false,
             emailRedirectTo: authRedirect()
