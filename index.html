@@ -74,6 +74,27 @@
         <p id="loginError" class="form-error" role="alert" hidden></p>
       </form>
 
+      <form id="magicCodeForm" class="login-form" hidden>
+        <p class="login-copy">Enter the one-time code from your sign-in email.</p>
+        <label>
+          <span>Email</span>
+          <div class="input-wrap">
+            <i class="fa-regular fa-envelope"></i>
+            <input id="magicCodeEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+        </label>
+        <label>
+          <span>One-time code</span>
+          <div class="input-wrap">
+            <i class="fa-solid fa-key"></i>
+            <input id="magicCode" type="text" inputmode="numeric" autocomplete="one-time-code" required placeholder="Enter email code">
+          </div>
+        </label>
+        <button id="verifyMagicCodeButton" class="primary wide" type="submit">Verify code and sign in</button>
+        <button id="backFromMagicCodeButton" class="secondary wide" type="button">Back to sign in</button>
+        <p id="magicCodeMessage" class="form-status" role="status" hidden></p>
+      </form>
+
       <form id="resetPasswordForm" class="login-form" hidden>
         <p class="login-copy">Choose a new password for your admin account.</p>
         <label><span>New password</span><div class="input-wrap">
