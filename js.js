@@ -2542,7 +2542,7 @@
   $("#refreshStats")?.addEventListener("click", loadWebsiteStats);
 
   // Team management runs through a protected Edge Function using the current admin session.
-  const TEAM_FUNCTION_URL = SUPABASE_URL + "/functions/v1/admin-team-management";
+  const TEAM_FUNCTION_URL = SUPABASE_URL + "/functions/v1/dflandscape-admin-team-management";
   const teamView = $("#teamView");
   const teamStatus = $("#teamStatus");
   const teamMembersList = $("#teamMembersList");
