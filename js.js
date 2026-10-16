@@ -44,6 +44,8 @@
   const resetPasswordForm = $("#resetPasswordForm");
   const resetPasswordError = $("#resetPasswordError");
   let emailRequestBusy = false;
+  let passwordLoginInProgress = false;
+  let lastAuthError = "";
 
   const fileInput = $("#fileInput");
   const photoGrid = $("#photoGrid");
@@ -145,24 +147,22 @@
       const allowed = await checkAdmin(user);
 
       if (!allowed) {
+        lastAuthError = "Your email and password were accepted, but this account is not authorized for the admin dashboard. Ask an administrator to add this account to dfl_admins.";
         await client.auth.signOut();
-
-        showLogin(
-          "This account is signed in, but it is not a Desert Forest admin."
-        );
+        showLogin(lastAuthError);
 
         return;
       }
     } catch (error) {
       console.error(error);
 
-      showLogin(
-        "Admin access is not set up yet. Run the Supabase admin SQL first."
-      );
+      lastAuthError = "Sign-in succeeded, but admin permissions could not be checked: " + (error?.message || "Unknown error") + ". Check Supabase dfl_admins permissions.";
+      showLogin(lastAuthError);
 
       return;
     }
 
+    lastAuthError = "";
     signedInEmail.textContent = user.email || "Admin";
 
     loginView.hidden = true;
@@ -174,6 +174,7 @@
   }
 
   function showLogin(message = "") {
+    message = message || lastAuthError;
     appView.hidden = true;
     loginView.hidden = false;
 
@@ -1837,6 +1838,8 @@
       event.preventDefault();
       if (emailRequestBusy) return;
       loginStatus.hidden = true;
+      lastAuthError = "";
+      passwordLoginInProgress = true;
 
       loginError.hidden =
         true;
@@ -1910,6 +1913,7 @@
           error?.message ||
           "Could not sign in. Please try again.";
       } finally {
+        passwordLoginInProgress = false;
         setBusy(
           loginButton,
           false
@@ -2967,7 +2971,7 @@
         return;
       }
       // Defer database/auth calls until the Supabase auth callback releases its lock.
-      if (event === "SIGNED_IN" && session && !recoveringPassword && appView.hidden) {
+      if (event === "SIGNED_IN" && session && !recoveringPassword && !passwordLoginInProgress && appView.hidden) {
         setTimeout(() => enterApp(session), 0);
       }
       if (
@@ -2978,7 +2982,7 @@
 
         photos = [];
 
-        showLogin();
+        showLogin(lastAuthError);
 
         return;
       }
@@ -3052,7 +3056,7 @@
         error
       );
 
-      showLogin();
+      showLogin("Unable to restore your login session: " + (error?.message || "Please try signing in again."));
     }
   })();
 })();
