@@ -2834,7 +2834,8 @@
     loadCustomerReviews();
   }));
   $("#refreshCustomerReviews")?.addEventListener("click",loadCustomerReviews);
-\n  const photosView = $("#photosView");
+
+  const photosView = $("#photosView");
   const statsView = $("#statsView");
   const pageTitle = $("#pageTitle");
   const pageEyebrow = $("#pageEyebrow");
@@ -2842,8 +2843,10 @@
 
   function switchView(view) {
     const stats = view === "stats";
-    const team = view === "team";\n    const reviews = view === "reviews";
-    photosView.hidden = stats || team || reviews;\n    reviewsView.hidden = !reviews;
+    const team = view === "team";
+    const reviews = view === "reviews";
+    photosView.hidden = stats || team || reviews;
+    reviewsView.hidden = !reviews;
     statsView.hidden = !stats;
     teamView.hidden = !team;
     pageTitle.textContent = reviews ? "Customer Reviews" : team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
@@ -2860,10 +2863,12 @@
     window.scrollTo({ top: 0, behavior: "instant" });
     updateScrollTopButton();
     if (stats) loadWebsiteStats();
-    if (team) loadTeamMembers();\n    if (reviews) loadCustomerReviews();
+    if (team) loadTeamMembers();
+    if (reviews) loadCustomerReviews();
   }
 
-  document.querySelector('[data-view="reviews"]')?.addEventListener("click", () => switchView("reviews"));\n  document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
+  document.querySelector('[data-view="reviews"]')?.addEventListener("click", () => switchView("reviews"));
+  document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
   document.querySelector('[data-view="team"]')?.addEventListener("click", () => switchView("team"));
   document.querySelector('[data-scroll="photosSection"]')?.addEventListener("click", () => switchView("photos"));
 
