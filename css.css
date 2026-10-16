@@ -1492,3 +1492,6 @@ button,
 #loginView .small-note{margin-top:12px;font-size:12px;color:#7e887e;text-align:center}
 #loginView .save-email-check{font-family:Arial,sans-serif;font-size:13px;font-weight:900;line-height:1!important;display:flex!important;align-items:center!important;justify-content:center!important}
 #loginView .save-email-row input:checked+.save-email-check{background:#173622!important;color:#fff!important;border-color:#173622!important}
+
+/* Customer review moderation */
+.review-admin-filters{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.review-admin-filters button,.review-admin-card button,#refreshCustomerReviews{border:1px solid #8fad96;border-radius:9px;background:#fff;color:#143b2b;padding:10px 15px;font-weight:700;cursor:pointer}.review-admin-filters button.active,.review-admin-actions button:first-child{background:#174f32;color:#fff}.review-admin-list{display:grid;gap:14px}.review-admin-card{min-width:0;border:1px solid #dce6df;background:#fff;border-radius:13px;padding:18px}.review-admin-card h3{margin:0 0 9px}.review-admin-card p{overflow-wrap:anywhere}.review-admin-copy{white-space:pre-wrap;line-height:1.55}.review-admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
