@@ -138,7 +138,7 @@
           <i class="fa-solid fa-chart-line"></i>
           Website Stats
         </button>
-        <button type="button" data-view="team">
+        <button type="button" data-view="reviews"><i class="fa-solid fa-star"></i> Customer Reviews</button><button type="button" data-view="team">
           <i class="fa-solid fa-users-gear"></i>
           Manage Team
         </button>
@@ -175,7 +175,7 @@
         </div>
       </header>
 
-      <div class="content" id="photosView">
+      <section class="content" id="reviewsView" hidden><section class="section-card"><div class="section-head"><div><h2>Customer Review Approvals</h2><p>Review submissions before they become public.</p></div><button id="refreshCustomerReviews" type="button">Refresh</button></div><div class="review-admin-filters"><button data-review-filter="pending" class="active">Pending</button><button data-review-filter="approved">Approved</button><button data-review-filter="rejected">Rejected</button></div><p id="customerReviewAdminStatus" role="status"></p><div id="customerReviewAdminList" class="review-admin-list"></div></section></section><div class="content" id="photosView">
         <section class="intro-card">
           <div>
             <span class="eyebrow">HOW IT WORKS</span>
@@ -362,7 +362,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261008-18"></script>
+  <script src="js.js?v=20261015-reviews-1"></script>
   <script>
     // Keep the installed admin web app current without reinstalling it.
     if ('serviceWorker' in navigator) {
