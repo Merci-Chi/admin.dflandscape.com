@@ -2791,7 +2791,46 @@
     }
   });
 
-  const photosView = $("#photosView");
+
+  const reviewsView = $("#reviewsView");
+  let reviewFilter = "pending";
+  async function loadCustomerReviews() {
+    const list = $("#customerReviewAdminList");
+    const status = $("#customerReviewAdminStatus");
+    list.replaceChildren();
+    status.textContent = "Loading reviews…";
+    const {data,error} = await client.from("dfl_customer_reviews")
+      .select("id,name,email,phone,rating,review,status,created_at")
+      .eq("status",reviewFilter).order("created_at",{ascending:false}).limit(150);
+    if(error) {status.textContent="Unable to load reviews: "+error.message+". Run the review SQL first.";return;}
+    status.textContent=data.length+" "+reviewFilter+" review(s)";
+    for(const item of data) {
+      const card=document.createElement("article");card.className="review-admin-card";
+      const title=document.createElement("h3");title.textContent=item.name+" · "+"★".repeat(item.rating);
+      const meta=document.createElement("p");meta.textContent=[item.email,item.phone,new Date(item.created_at).toLocaleString()].join(" · ");
+      const body=document.createElement("p");body.className="review-admin-copy";body.textContent=item.review;
+      const actions=document.createElement("div");actions.className="review-admin-actions";
+      for(const [value,label] of [["approved","Approve"],["rejected","Reject"],["pending","Move to pending"]]) {
+        if(value===item.status)continue;
+        const button=document.createElement("button");button.type="button";button.textContent=label;
+        button.addEventListener("click",async()=>{
+          button.disabled=true;
+          const {error}=await client.from("dfl_customer_reviews").update({status:value}).eq("id",item.id);
+          if(error){status.textContent="Update failed: "+error.message;button.disabled=false;return;}
+          await loadCustomerReviews();
+        });
+        actions.append(button);
+      }
+      card.append(title,meta,body,actions);list.append(card);
+    }
+  }
+  document.querySelectorAll("[data-review-filter]").forEach(button=>button.addEventListener("click",()=>{
+    reviewFilter=button.dataset.reviewFilter;
+    document.querySelectorAll("[data-review-filter]").forEach(b=>b.classList.toggle("active",b===button));
+    loadCustomerReviews();
+  }));
+  $("#refreshCustomerReviews")?.addEventListener("click",loadCustomerReviews);
+\n  const photosView = $("#photosView");
   const statsView = $("#statsView");
   const pageTitle = $("#pageTitle");
   const pageEyebrow = $("#pageEyebrow");
@@ -2799,15 +2838,15 @@
 
   function switchView(view) {
     const stats = view === "stats";
-    const team = view === "team";
-    photosView.hidden = stats || team;
+    const team = view === "team";\n    const reviews = view === "reviews";
+    photosView.hidden = stats || team || reviews;\n    reviewsView.hidden = !reviews;
     statsView.hidden = !stats;
     teamView.hidden = !team;
-    pageTitle.textContent = team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
-    pageEyebrow.textContent = team ? "ACCOUNT ADMINISTRATION" : stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
-    uploadPhotosAction.hidden = stats || team;
+    pageTitle.textContent = reviews ? "Customer Reviews" : team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
+    pageEyebrow.textContent = reviews ? "REVIEW APPROVALS" : team ? "ACCOUNT ADMINISTRATION" : stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
+    uploadPhotosAction.hidden = stats || team || reviews;
     document.querySelectorAll(".side-nav button").forEach(button => {
-      const active = team ? button.dataset.view === "team" : stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
+      const active = reviews ? button.dataset.view === "reviews" : team ? button.dataset.view === "team" : stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
@@ -2817,10 +2856,10 @@
     window.scrollTo({ top: 0, behavior: "instant" });
     updateScrollTopButton();
     if (stats) loadWebsiteStats();
-    if (team) loadTeamMembers();
+    if (team) loadTeamMembers();\n    if (reviews) loadCustomerReviews();
   }
 
-  document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
+  document.querySelector('[data-view="reviews"]')?.addEventListener("click", () => switchView("reviews"));\n  document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
   document.querySelector('[data-view="team"]')?.addEventListener("click", () => switchView("team"));
   document.querySelector('[data-scroll="photosSection"]')?.addEventListener("click", () => switchView("photos"));
 
