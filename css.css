@@ -1495,3 +1495,26 @@ button,
 
 /* Customer review moderation */
 .review-admin-filters{display:flex;gap:10px;flex-wrap:wrap;margin:20px 0}.review-admin-filters button,.review-admin-card button,#refreshCustomerReviews{border:1px solid #8fad96;border-radius:9px;background:#fff;color:#143b2b;padding:10px 15px;font-weight:700;cursor:pointer}.review-admin-filters button.active,.review-admin-actions button:first-child{background:#174f32;color:#fff}.review-admin-list{display:grid;gap:14px}.review-admin-card{min-width:0;border:1px solid #dce6df;background:#fff;border-radius:13px;padding:18px}.review-admin-card h3{margin:0 0 9px}.review-admin-card p{overflow-wrap:anywhere}.review-admin-copy{white-space:pre-wrap;line-height:1.55}.review-admin-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+
+/* Application Review — uses the admin dashboard's green and cream theme. */
+.application-review-toolbar{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:20px}
+.application-review-toolbar label,.application-review-footer label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:800;color:var(--forest)}
+.application-review-toolbar select,.application-review-toolbar input,.application-review-footer select{border:1px solid #b7cbbb;border-radius:10px;background:#fff;color:#173622;padding:10px 12px;min-height:43px;font:inherit}
+.application-review-toolbar input{width:min(310px,100%)}
+.applications-list{display:grid;gap:16px}
+.application-review-card{border:1px solid #dce5dd;border-radius:16px;background:#fff;padding:20px;min-width:0}
+.application-review-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;border-bottom:1px solid #edf0e9;padding-bottom:15px}
+.application-review-head h3{margin:0 0 5px;font-size:19px;color:#153e2a;overflow-wrap:anywhere}
+.application-review-date{font-size:12px;color:var(--muted);margin:0}
+.application-status-pill{flex:none;border:1px solid #bdd3bf;background:#e8f2e8;color:#204b30;padding:7px 11px;border-radius:30px;font-size:11px;font-weight:800}
+.application-review-details{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px;padding:17px 0}
+.application-review-details>div{min-width:0}
+.application-review-details strong{display:block;color:#5e6e63;font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.application-review-details span,.application-review-details a{font-size:14px;color:#173622;overflow-wrap:anywhere}
+.application-review-message{grid-column:1/-1;background:#f5f8f3;border-radius:10px;padding:13px}
+.application-review-message p{font-size:14px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.application-review-footer{display:flex;align-items:end;gap:14px;border-top:1px solid #edf0e9;padding-top:15px}
+.application-review-footer select{min-width:180px}
+.application-save-note{font-size:12px;color:#456d4f;padding-bottom:10px}
+.application-empty{color:var(--muted);font-size:14px;padding:15px 0}
+@media(max-width:680px){.application-review-toolbar{flex-direction:column}.application-review-toolbar label,.application-review-toolbar input,.application-review-toolbar select{width:100%}.application-review-details{grid-template-columns:1fr;gap:13px}.application-review-head h3{font-size:17px}.application-review-card{padding:15px}.application-review-footer{flex-wrap:wrap}.application-review-footer label,.application-review-footer select{width:100%;min-width:0}}
