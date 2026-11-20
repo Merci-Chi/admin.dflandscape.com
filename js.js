@@ -2796,6 +2796,144 @@
   });
 
 
+
+  // Hiring application moderation; access is enforced by Supabase RLS, not by hiding this view.
+  const applicationsView = $("#applicationsView");
+  const applicationsList = $("#applicationsList");
+  const applicationsStatus = $("#applicationsStatus");
+  const applicationsFilter = $("#applicationFilter");
+  const applicationsSearch = $("#applicationSearch");
+  const applicationStatuses = {
+    new: "New", reviewing: "Reviewing", contacted: "Contacted",
+    interview: "Interview", hired: "Hired", declined: "Declined"
+  };
+  let applicationRows = [];
+  let applicationsLoading = false;
+
+  function renderApplications() {
+    if (!applicationsList) return;
+    applicationsList.replaceChildren();
+    const query = (applicationsSearch?.value || "").trim().toLowerCase();
+    const statusFilter = applicationsFilter?.value || "all";
+    const rows = applicationRows.filter(item => {
+      if (statusFilter !== "all" && item.status !== statusFilter) return false;
+      if (!query) return true;
+      return [item.full_name, item.email, item.phone, item.city, item.experience, item.message]
+        .some(field => String(field || "").toLowerCase().includes(query));
+    });
+    applicationsStatus.textContent = rows.length + " of " + applicationRows.length + " application(s) displayed.";
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "application-empty";
+      empty.textContent = applicationRows.length ? "No applications match these filters." : "No applications received yet.";
+      applicationsList.append(empty);
+      return;
+    }
+    rows.forEach(item => {
+      const card = document.createElement("article");
+      card.className = "application-review-card";
+      const head = document.createElement("div");
+      head.className = "application-review-head";
+      const identity = document.createElement("div");
+      const name = document.createElement("h3");
+      name.textContent = item.full_name || "Applicant";
+      const date = document.createElement("p");
+      date.className = "application-review-date";
+      date.textContent = "Submitted " + (item.created_at ? new Date(item.created_at).toLocaleString() : "—");
+      identity.append(name,date);
+      const pill = document.createElement("span");
+      pill.className = "application-status-pill";
+      pill.textContent = applicationStatuses[item.status] || item.status || "New";
+      head.append(identity,pill);
+      const details = document.createElement("div");
+      details.className = "application-review-details";
+      function detail(label,value,href) {
+        const cell = document.createElement("div");
+        const term = document.createElement("strong");
+        term.textContent = label;
+        const content = href ? document.createElement("a") : document.createElement("span");
+        content.textContent = value || "—";
+        if (href) content.href = href;
+        cell.append(term,content);
+        details.append(cell);
+      }
+      detail("Email",item.email,item.email ? "mailto:" + item.email : null);
+      detail("Phone",item.phone,item.phone ? "tel:" + item.phone.replace(/[^+\d]/g, "") : null);
+      detail("City / Area",item.city);
+      detail("Experience",item.experience);
+      detail("Start availability",item.start_availability);
+      detail("Work schedule",item.schedule);
+      if (item.message) {
+        const description = document.createElement("div");
+        description.className = "application-review-message";
+        const heading = document.createElement("strong");
+        heading.textContent = "Additional experience";
+        const content = document.createElement("p");
+        content.textContent = item.message;
+        description.append(heading,content);
+        details.append(description);
+      }
+      const footer = document.createElement("div");
+      footer.className = "application-review-footer";
+      const selectLabel = document.createElement("label");
+      selectLabel.textContent = "Review status";
+      const select = document.createElement("select");
+      select.setAttribute("aria-label", "Review status for " + (item.full_name || "applicant"));
+      Object.entries(applicationStatuses).forEach(([value,label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        select.append(option);
+      });
+      select.value = item.status || "new";
+      const notice = document.createElement("span");
+      notice.className = "application-save-note";
+      select.addEventListener("change", async () => {
+        const previous = item.status;
+        const next = select.value;
+        select.disabled = true;
+        notice.textContent = "Saving…";
+        const { error } = await client.from("dfl_job_applications").update({status:next}).eq("id",item.id);
+        if (error) {
+          select.value = previous;
+          notice.textContent = "Could not save: " + error.message;
+        } else {
+          item.status = next;
+          pill.textContent = applicationStatuses[next];
+          notice.textContent = "Saved";
+          if (applicationsFilter?.value !== "all") renderApplications();
+        }
+        select.disabled = false;
+      });
+      selectLabel.append(select);
+      footer.append(selectLabel,notice);
+      card.append(head,details,footer);
+      applicationsList.append(card);
+    });
+  }
+
+  async function loadApplications() {
+    if (applicationsLoading || !applicationsList) return;
+    applicationsLoading = true;
+    applicationsStatus.textContent = "Loading applications…";
+    applicationsList.replaceChildren();
+    try {
+      const { data, error } = await client.from("dfl_job_applications")
+        .select("id,created_at,full_name,email,phone,city,experience,start_availability,schedule,message,status")
+        .order("created_at",{ascending:false}).limit(500);
+      if (error) throw error;
+      applicationRows = data || [];
+      renderApplications();
+    } catch (error) {
+      applicationsStatus.textContent = "Unable to load applications: " + (error?.message || "Unknown error");
+    } finally {
+      applicationsLoading = false;
+    }
+  }
+  applicationsFilter?.addEventListener("change",renderApplications);
+  applicationsSearch?.addEventListener("input",renderApplications);
+  $("#refreshApplications")?.addEventListener("click",loadApplications);
+
   const reviewsView = $("#reviewsView");
   let reviewFilter = "pending";
   async function loadCustomerReviews() {
@@ -2845,15 +2983,17 @@
     const stats = view === "stats";
     const team = view === "team";
     const reviews = view === "reviews";
-    photosView.hidden = stats || team || reviews;
+    const applications = view === "applications";
+    photosView.hidden = stats || team || reviews || applications;
     reviewsView.hidden = !reviews;
+    applicationsView.hidden = !applications;
     statsView.hidden = !stats;
     teamView.hidden = !team;
-    pageTitle.textContent = reviews ? "Customer Reviews" : team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
-    pageEyebrow.textContent = reviews ? "REVIEW APPROVALS" : team ? "ACCOUNT ADMINISTRATION" : stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
-    uploadPhotosAction.hidden = stats || team || reviews;
+    pageTitle.textContent = applications ? "Application Review" : reviews ? "Customer Reviews" : team ? "Manage Team" : stats ? "Website Stats" : "Project Photos";
+    pageEyebrow.textContent = applications ? "HIRING APPLICATIONS" : reviews ? "REVIEW APPROVALS" : team ? "ACCOUNT ADMINISTRATION" : stats ? "WEBSITE ANALYTICS" : "WEBSITE CONTENT";
+    uploadPhotosAction.hidden = stats || team || reviews || applications;
     document.querySelectorAll(".side-nav button").forEach(button => {
-      const active = reviews ? button.dataset.view === "reviews" : team ? button.dataset.view === "team" : stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
+      const active = applications ? button.dataset.view === "applications" : reviews ? button.dataset.view === "reviews" : team ? button.dataset.view === "team" : stats ? button.dataset.view === "stats" : button.dataset.scroll === "photosSection";
       button.classList.toggle("active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");
@@ -2865,8 +3005,10 @@
     if (stats) loadWebsiteStats();
     if (team) loadTeamMembers();
     if (reviews) loadCustomerReviews();
+    if (applications) loadApplications();
   }
 
+  document.querySelector('[data-view="applications"]')?.addEventListener("click", () => switchView("applications"));
   document.querySelector('[data-view="reviews"]')?.addEventListener("click", () => switchView("reviews"));
   document.querySelector('[data-view="stats"]')?.addEventListener("click", () => switchView("stats"));
   document.querySelector('[data-view="team"]')?.addEventListener("click", () => switchView("team"));
