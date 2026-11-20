@@ -2863,6 +2863,32 @@
       detail("Experience",item.experience);
       detail("Start availability",item.start_availability);
       detail("Work schedule",item.schedule);
+      if (item.resume_path) {
+        const resumeBox=document.createElement("div");
+        const heading=document.createElement("strong");
+        heading.textContent="Attached resume";
+        const button=document.createElement("button");
+        button.type="button";
+        button.textContent="View resume";
+        button.className="application-resume-button";
+        button.addEventListener("click",async()=>{
+          button.disabled=true;
+          button.textContent="Opening…";
+          try{
+            const {data,error}=await client.storage.from("dfl-job-resumes").createSignedUrl(item.resume_path,60);
+            if(error)throw error;
+            if(!data?.signedUrl)throw new Error("No download URL was returned.");
+            const link=document.createElement("a");
+            link.href=data.signedUrl;
+            link.target="_blank";
+            link.rel="noopener noreferrer";
+            link.click();
+          }catch(err){applicationsStatus.textContent="Unable to open resume: "+(err.message||"Unknown error");}
+          finally{button.disabled=false;button.textContent="View resume";}
+        });
+        resumeBox.append(heading,button);
+        details.append(resumeBox);
+      }
       if (item.message) {
         const description = document.createElement("div");
         description.className = "application-review-message";
@@ -2919,7 +2945,7 @@
     applicationsList.replaceChildren();
     try {
       const { data, error } = await client.from("dfl_job_applications")
-        .select("id,created_at,full_name,email,phone,city,experience,start_availability,schedule,message,status")
+        .select("id,created_at,full_name,email,phone,city,experience,start_availability,schedule,message,status,resume_path")
         .order("created_at",{ascending:false}).limit(500);
       if (error) throw error;
       applicationRows = data || [];
