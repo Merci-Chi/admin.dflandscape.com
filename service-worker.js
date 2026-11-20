@@ -1,5 +1,5 @@
 // Update this version whenever the admin app shell changes.
-const CACHE_NAME = 'dfl-admin-pwa-20261015-login-controls-fix-2';
+const CACHE_NAME = 'dfl-admin-pwa-20261119-applications-review';
 const SHELL = [
   '/',
   '/index.html',
