@@ -138,7 +138,7 @@
           <i class="fa-solid fa-chart-line"></i>
           Website Stats
         </button>
-        <button type="button" data-view="reviews"><i class="fa-solid fa-star"></i> Customer Reviews</button><button type="button" data-view="team">
+        <button type="button" data-view="reviews"><i class="fa-solid fa-star"></i> Customer Reviews</button><button type="button" data-view="applications"><i class="fa-solid fa-briefcase"></i> Application Review</button><button type="button" data-view="team">
           <i class="fa-solid fa-users-gear"></i>
           Manage Team
         </button>
@@ -175,6 +175,17 @@
         </div>
       </header>
 
+      <section class="content application-review-view" id="applicationsView" hidden>
+        <section class="section-card">
+          <div class="section-head"><div><span class="eyebrow">NOW HIRING</span><h2>Employment Applications</h2><p>Review applicants and track their progress privately.</p></div><button id="refreshApplications" class="secondary" type="button"><i class="fa-solid fa-rotate"></i> Refresh</button></div>
+          <div class="application-review-toolbar">
+            <label for="applicationFilter">Status <select id="applicationFilter"><option value="all">All applications</option><option value="new">New</option><option value="reviewing">Reviewing</option><option value="contacted">Contacted</option><option value="interview">Interview</option><option value="hired">Hired</option><option value="declined">Declined</option></select></label>
+            <label for="applicationSearch">Search <input type="search" id="applicationSearch" placeholder="Name, email, city, phone" autocomplete="off"></label>
+          </div>
+          <p id="applicationsStatus" class="stats-status" role="status" aria-live="polite">Open this tab to load applications.</p>
+          <div id="applicationsList" class="applications-list"></div>
+        </section>
+      </section>
       <section class="content" id="reviewsView" hidden><section class="section-card"><div class="section-head"><div><h2>Customer Review Approvals</h2><p>Review submissions before they become public.</p></div><button id="refreshCustomerReviews" type="button">Refresh</button></div><div class="review-admin-filters"><button data-review-filter="pending" class="active">Pending</button><button data-review-filter="approved">Approved</button><button data-review-filter="rejected">Rejected</button></div><p id="customerReviewAdminStatus" role="status"></p><div id="customerReviewAdminList" class="review-admin-list"></div></section></section><div class="content" id="photosView">
         <section class="intro-card">
           <div>
@@ -362,7 +373,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-  <script src="js.js?v=20261015-login-controls-fix-2"></script>
+  <script src="js.js?v=20261119-applications-review"></script>
   <script>
     // Keep the installed admin web app current without reinstalling it.
     if ('serviceWorker' in navigator) {
