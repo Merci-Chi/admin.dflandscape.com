@@ -2875,7 +2875,7 @@
           button.disabled=true;
           button.textContent="Opening…";
           try{
-            const {data,error}=await client.storage.from("dfl-job-resumes").createSignedUrl(item.resume_path,60);
+            const {data,error}=await client.storage.from("dfl-job-resumes").createSignedUrl(item.resume_path,60,{download:true});
             if(error)throw error;
             if(!data?.signedUrl)throw new Error("No download URL was returned.");
             const link=document.createElement("a");
